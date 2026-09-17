@@ -6,7 +6,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 log = logging.getLogger("server")
 
 
-def start(commands, hw, player, cfg, port=5050, lights=None, presence=None):
+def start(commands, hw, player, cfg, port=5050, lights=None, presence=None, lux=None):
 
     class Handler(BaseHTTPRequestHandler):
 
@@ -43,7 +43,10 @@ def start(commands, hw, player, cfg, port=5050, lights=None, presence=None):
             elif path == "/commands":
                 self.send(200, {"ok": True, "commands": commands.list()})
             elif path == "/sensor":
-                self.send(200, {"ok": True, "sensor": hw.read_sensors()})
+                data = {"ok": True, "sensor": hw.read_sensors()}
+                if lux:
+                    data["ambient"] = lux.status()
+                self.send(200, data)
             elif path == "/audio":
                 self.send(200, {"ok": True, **player.status()})
             elif path == "/presence":
@@ -56,6 +59,11 @@ def start(commands, hw, player, cfg, port=5050, lights=None, presence=None):
                     self.send(200, {"ok": True, **lights.status()})
                 else:
                     self.fail("lights not available", 503)
+            elif path == "/ambient":
+                if lux:
+                    self.send(200, {"ok": True, **lux.status()})
+                else:
+                    self.fail("light sensor not available", 503)
             else:
                 self.fail("not found", 404)
 

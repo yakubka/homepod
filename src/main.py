@@ -13,6 +13,7 @@ from detector import Detector
 from display import Display
 from hardware import Hardware
 from led_ring import Ring
+from light_sensor import LightSensor
 from lights import Lights
 from presence import Presence
 from servo import Servo
@@ -45,13 +46,18 @@ def main():
     servo = Servo()
     servo.show_volume(cfg["volume"])
 
+    lux = None
+    if cfg["lux_sensor"]:
+        lux = LightSensor()
+        lux.poll(cfg["lux_poll_interval"])
+
     camera = Camera(width=cfg["camera_width"], height=cfg["camera_height"], fps=cfg["camera_fps"])
     detector = Detector(width=cfg["camera_width"])
-    lights = Lights(auto_off=cfg["light_auto_off_delay"])
+    lights = Lights(cfg["light_auto_off_delay"], lux, cfg["dark_threshold"])
     presence = Presence(camera, detector, lights, display, cfg["detection_interval"])
 
-    commands = Commands(hw, player, config, display, ring, servo, lights, presence)
-    api = server.start(commands, hw, player, config, cfg["api_port"], lights, presence)
+    commands = Commands(hw, player, config, display, ring, servo, lights, presence, lux)
+    api = server.start(commands, hw, player, config, cfg["api_port"], lights, presence, lux)
 
     if cfg["presence_detection"]:
         presence.start()
@@ -63,6 +69,8 @@ def main():
         log.info("shutting down")
         presence.stop()
         lights.cleanup()
+        if lux:
+            lux.stop()
         display.stop()
         ring.off()
         servo.stop()

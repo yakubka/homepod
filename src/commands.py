@@ -9,7 +9,7 @@ ZONE_WORDS = {"left": "on the left", "center": "in the middle", "right": "on the
 
 class Commands:
     def __init__(self, hw, player, cfg, display=None, ring=None, servo=None,
-                 lights=None, presence=None):
+                 lights=None, presence=None, lux=None):
         self.hw = hw
         self.player = player
         self.cfg = cfg
@@ -18,6 +18,7 @@ class Commands:
         self.servo = servo
         self.lights = lights
         self.presence = presence
+        self.lux = lux
         self.handlers = {
             "play_music": self.play,
             "stop_music": self.stop,
@@ -36,6 +37,7 @@ class Commands:
             "follow_mode_on": self.follow_on,
             "follow_mode_off": self.follow_off,
             "is_anyone_home": self.anyone_home,
+            "get_brightness": self.brightness,
         }
 
     def run(self, intent, params=None):
@@ -97,7 +99,10 @@ class Commands:
 
     def weather(self, p):
         s = self.hw.read_sensors()
-        return {"say": f"Room is {s['temperature']} degrees, humidity {s['humidity']} percent"}
+        say = f"Room is {s['temperature']} degrees, humidity {s['humidity']} percent"
+        if self.lux:
+            say += f", light is {self.lux.level()}"
+        return {"say": say}
 
     def temperature(self, p):
         return {"say": f"Temperature is {self.hw.read_sensors()['temperature']} degrees"}
@@ -173,6 +178,12 @@ class Commands:
         if s["empty_for"]:
             return {"say": f"Room has been empty for {s['empty_for']} seconds", "data": s}
         return {"say": "Room is empty", "data": s}
+
+    def brightness(self, p):
+        if not self.lux:
+            return {"say": "Light sensor is not available"}
+        s = self.lux.status()
+        return {"say": f"Room is {s['level']}, {s['lux']} lux", "data": s}
 
     def list(self):
         return list(self.handlers)

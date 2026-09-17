@@ -10,12 +10,14 @@ AUTO_OFF = 30
 
 
 class Lights:
-    def __init__(self, auto_off=AUTO_OFF):
+    def __init__(self, auto_off=AUTO_OFF, lux=None, dark_threshold=50):
         self.zones = {n: False for n in RELAYS}
         self.auto_off = auto_off
         self.seen = {n: 0.0 for n in RELAYS}
         self.manual = {n: False for n in RELAYS}
         self.follow = True
+        self.lux = lux
+        self.dark_threshold = dark_threshold
 
         if not SIM:
             import RPi.GPIO as GPIO
@@ -50,6 +52,11 @@ class Lights:
         log.info(f"follow mode {'on' if on else 'off'}")
         return self.follow
 
+    def needed(self):
+        if not self.lux:
+            return True
+        return self.lux.is_dark(self.dark_threshold)
+
     def update(self, zone):
         if not self.follow:
             return
@@ -58,7 +65,11 @@ class Lights:
         if zone in self.zones:
             self.seen[zone] = now
             if not self.manual[zone]:
-                self.set(zone, True)
+                if self.needed():
+                    self.set(zone, True)
+                elif self.zones[zone]:
+                    self.set(zone, False)
+                    log.info(f"zone {zone} bright enough, switched off")
 
         for other in self.zones:
             if other == zone or self.manual[other] or not self.zones[other]:
@@ -76,6 +87,7 @@ class Lights:
             "manual": self.manual.copy(),
             "idle": {z: int(now - t) if t else None for z, t in self.seen.items()},
             "auto_off": self.auto_off,
+            "ambient": self.lux.status() if self.lux else None,
         }
 
     def cleanup(self):

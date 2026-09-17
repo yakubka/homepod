@@ -17,6 +17,9 @@ DEFAULTS = {
     "camera_fps": 10,
     "detection_interval": 1.0,
     "light_auto_off_delay": 30,
+    "lux_sensor": True,
+    "lux_poll_interval": 5,
+    "dark_threshold": 50,
 }
 
 PATH = os.path.join(os.path.dirname(__file__), "..", "device_config.json")
