@@ -2,7 +2,9 @@ import logging
 
 log = logging.getLogger("detector")
 
-SIM = True
+from services.core.config import REAL
+
+SIM = not REAL
 
 PERSON_CLASS = 15
 MIN_CONF = 0.5

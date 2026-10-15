@@ -5,7 +5,9 @@ import time
 
 log = logging.getLogger("ring")
 
-SIM = True
+from services.core.config import REAL
+
+SIM = not REAL
 
 COUNT = 12
 PIN = 12

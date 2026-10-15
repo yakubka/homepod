@@ -5,7 +5,9 @@ import time
 
 log = logging.getLogger("camera")
 
-SIM = True
+from services.core.config import REAL
+
+SIM = not REAL
 
 
 class Camera:

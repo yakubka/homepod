@@ -4,7 +4,9 @@ import time
 
 log = logging.getLogger("lux")
 
-SIM = True
+from services.core.config import REAL
+
+SIM = not REAL
 
 ADDR = 0x23
 BUS = 1

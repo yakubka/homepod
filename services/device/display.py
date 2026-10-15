@@ -4,7 +4,9 @@ import time
 
 log = logging.getLogger("display")
 
-SIM = True
+from services.core.config import REAL
+
+SIM = not REAL
 
 ADDR = 0x3C
 WIDTH = 128

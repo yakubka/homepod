@@ -4,7 +4,9 @@ import time
 
 log = logging.getLogger("servo")
 
-SIM = True
+from services.core.config import REAL
+
+SIM = not REAL
 PIN = 13
 
 

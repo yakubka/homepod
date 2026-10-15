@@ -1,7 +1,11 @@
-__pycache__/
+
 *.py[cod]
 .DS_Store
+.coverage
+.pytest_cache/
+.venv/
+__pycache__/
 device_config.json
+htmlcov/
 models/*.caffemodel
 venv/
-.venv/

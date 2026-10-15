@@ -4,7 +4,9 @@ import time
 
 log = logging.getLogger("hardware")
 
-SIM = True
+from services.core.config import REAL
+
+SIM = not REAL
 
 LEDS = {"status": 17, "listening": 27, "error": 22}
 DHT_PIN = 4
