@@ -53,7 +53,7 @@ V-14. What moved where, and what was deleted. Read this before looking for a fil
 | `services/core/engine/` | The decision engine, V-10 to V-12 |
 | `services/core/runtime.py` | The tick that builds the room state, calls the engine and applies the actions |
 | `sim/scenarios/`, `sim/golden/` | Eight room timelines and their expected outcomes, V-13 |
-| `tests/` | 90 tests, including the scenario runner |
+| `tests/` | 94 tests, including the scenario runner |
 | `docs/rules.md` | Every rule, its inputs, its thresholds and its priority |
 
 ## Running it

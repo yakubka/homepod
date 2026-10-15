@@ -77,7 +77,7 @@ pip install -r requirements-dev.txt
 PYTHONPATH=. python3 -m pytest tests/
 ```
 
-Ninety tests, under a second. The eight room scenarios replay a two hour lecture in milliseconds and
+Ninety four tests, under a second. The eight room scenarios replay a two hour lecture in milliseconds and
 diff against their golden outcomes, so a changed threshold shows up as a named scenario failing.
 
 ## API
