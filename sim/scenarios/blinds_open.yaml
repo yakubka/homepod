@@ -1,0 +1,15 @@
+name: Full room with lights on, daylight suddenly increases because the blinds open
+events:
+  - at: 0
+    lecture: {id: L2, name: Embedded Systems, start: 0, end: 5400, expected: 25}
+    occupancy: {total: 24, zones: {left: 8, center: 12, right: 4}}
+    environment: {lux: 110, temperature: 23.0, humidity: 48}
+  - at: 300
+    occupancy: {total: 24, zones: {left: 8, center: 12, right: 4}}
+    environment: {lux: 300, temperature: 23.2, humidity: 48}
+  - at: 600
+    occupancy: {total: 24, zones: {left: 8, center: 12, right: 4}}
+    environment: {lux: 620, temperature: 23.5, humidity: 48}
+  - at: 900
+    occupancy: {total: 24, zones: {left: 8, center: 12, right: 4}}
+    environment: {lux: 120, temperature: 23.5, humidity: 48}

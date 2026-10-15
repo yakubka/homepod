@@ -1,0 +1,16 @@
+name: Students arriving over ten minutes, centre first then left
+events:
+  - at: 0
+    lecture: {id: L1, name: Computer Networks, start: 0, end: 5400, expected: 20}
+    occupancy: {total: 0, zones: {left: 0, center: 0, right: 0}}
+    environment: {lux: 90, temperature: 23.0, humidity: 45}
+  - at: 120
+    occupancy: {total: 3, zones: {left: 0, center: 3, right: 0}}
+  - at: 240
+    occupancy: {total: 8, zones: {left: 0, center: 8, right: 0}}
+  - at: 360
+    occupancy: {total: 14, zones: {left: 4, center: 10, right: 0}}
+  - at: 480
+    occupancy: {total: 19, zones: {left: 7, center: 12, right: 0}}
+  - at: 600
+    occupancy: {total: 22, zones: {left: 8, center: 12, right: 2}}

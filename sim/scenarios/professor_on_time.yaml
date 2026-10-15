@@ -1,0 +1,10 @@
+name: Professor arrives on time
+events:
+  - at: 0
+    lecture: {id: L3, name: Signals and Systems, start: 0, end: 5400, expected: 18}
+    occupancy: {total: 12, zones: {left: 4, center: 8, right: 0}, professor: false}
+    environment: {lux: 80, temperature: 23.0, humidity: 44}
+  - at: 120
+    occupancy: {total: 13, zones: {left: 4, center: 9, right: 0}, professor: true}
+  - at: 600
+    occupancy: {total: 18, zones: {left: 6, center: 12, right: 0}, professor: true}

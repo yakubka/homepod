@@ -1,0 +1,14 @@
+name: The room empties at the end of the lecture, into energy saving
+events:
+  - at: 0
+    lecture: {id: L6, name: Databases, start: -5000, end: 400, expected: 20}
+    occupancy: {total: 21, zones: {left: 7, center: 12, right: 2}}
+    environment: {lux: 60, temperature: 23.6, humidity: 50}
+  - at: 420
+    occupancy: {total: 9, zones: {left: 3, center: 6, right: 0}}
+  - at: 600
+    occupancy: {total: 1, zones: {left: 0, center: 1, right: 0}}
+  - at: 900
+    occupancy: {total: 0, zones: {left: 0, center: 0, right: 0}}
+  - at: 1200
+    occupancy: {total: 0, zones: {left: 0, center: 0, right: 0}}

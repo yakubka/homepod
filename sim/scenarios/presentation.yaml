@@ -1,0 +1,14 @@
+name: Presentation mode starting and stopping mid lecture
+events:
+  - at: 0
+    lecture: {id: L5, name: Operating Systems, start: 0, end: 5400, expected: 20}
+    occupancy: {total: 20, zones: {left: 6, center: 12, right: 2}}
+    environment: {lux: 95, temperature: 23.0, humidity: 46}
+  - at: 600
+    presentation: true
+  - at: 1800
+    occupancy: {total: 20, zones: {left: 6, center: 12, right: 2}}
+  - at: 2400
+    presentation: false
+  - at: 2460
+    occupancy: {total: 20, zones: {left: 6, center: 12, right: 2}}

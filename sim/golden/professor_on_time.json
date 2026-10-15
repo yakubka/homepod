@@ -1,0 +1,44 @@
+[
+  {
+    "at": 0.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "center",
+    "value": 80
+  },
+  {
+    "at": 0.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "left",
+    "value": 60
+  },
+  {
+    "at": 120.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "center",
+    "value": 85
+  },
+  {
+    "at": 120.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "professor",
+    "value": 40
+  },
+  {
+    "at": 600.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "center",
+    "value": 100
+  },
+  {
+    "at": 600.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "left",
+    "value": 70
+  }
+]

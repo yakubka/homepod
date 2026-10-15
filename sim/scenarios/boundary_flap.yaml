@@ -1,0 +1,307 @@
+name: One person oscillating on the boundary between the centre and the right zone
+events:
+  - at: 0
+    lecture: {id: L7, name: Lab Session, start: 0, end: 5400, expected: 2}
+    environment: {lux: 60, temperature: 23.0, humidity: 45}
+  - at: 0
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 2
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 4
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 6
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 8
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 10
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 12
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 14
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 16
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 18
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 20
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 22
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 24
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 26
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 28
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 30
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 32
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 34
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 36
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 38
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 40
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 42
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 44
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 46
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 48
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 50
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 52
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 54
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 56
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 58
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 60
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 62
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 64
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 66
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 68
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 70
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 72
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 74
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 76
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 78
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 80
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 82
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 84
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 86
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 88
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 90
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 92
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 94
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 96
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 98
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 100
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 102
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 104
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 106
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 108
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 110
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 112
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 114
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 116
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 118
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 120
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 122
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 124
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 126
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 128
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 130
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 132
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 134
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 136
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 138
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 140
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 142
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 144
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 146
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 148
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 150
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 152
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 154
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 156
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 158
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 160
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 162
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 164
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 166
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 168
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 170
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 172
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 174
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 176
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 178
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 180
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 182
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 184
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 186
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 188
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 190
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 192
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 194
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 196
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 198
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 200
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 202
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 204
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 206
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 208
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 210
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 212
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 214
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 216
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 218
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 220
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 222
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 224
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 226
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 228
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 230
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 232
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 234
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 236
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 238
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 240
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 242
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 244
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 246
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 248
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 250
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 252
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 254
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 256
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 258
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 260
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 262
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 264
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 266
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 268
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 270
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 272
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 274
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 276
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 278
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 280
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 282
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 284
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 286
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 288
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 290
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 292
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 294
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 296
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}
+  - at: 298
+    occupancy: {total: 1, zones: {left: 0, center: 0, right: 1}}
+  - at: 300
+    occupancy: {total: 1, zones: {left: 1, center: 0, right: 0}}

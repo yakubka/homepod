@@ -1,0 +1,30 @@
+[
+  {
+    "at": 0.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "center",
+    "value": 85
+  },
+  {
+    "at": 0.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "left",
+    "value": 65
+  },
+  {
+    "at": 180.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "center",
+    "value": 90
+  },
+  {
+    "at": 330.0,
+    "rule": "announce.professor_absent",
+    "kind": "announce",
+    "target": "professor_absent",
+    "value": "L4"
+  }
+]

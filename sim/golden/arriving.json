@@ -1,0 +1,58 @@
+[
+  {
+    "at": 120.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "center",
+    "value": 55
+  },
+  {
+    "at": 240.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "center",
+    "value": 80
+  },
+  {
+    "at": 360.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "center",
+    "value": 90
+  },
+  {
+    "at": 360.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "left",
+    "value": 60
+  },
+  {
+    "at": 480.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "center",
+    "value": 100
+  },
+  {
+    "at": 480.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "left",
+    "value": 75
+  },
+  {
+    "at": 600.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "left",
+    "value": 80
+  },
+  {
+    "at": 600.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "right",
+    "value": 50
+  }
+]

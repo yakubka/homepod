@@ -1,0 +1,11 @@
+name: Empty room before a lecture, daylight rising through the window
+events:
+  - at: 0
+    occupancy: {total: 0, zones: {left: 0, center: 0, right: 0}}
+    environment: {lux: 40, temperature: 22.5, humidity: 45}
+  - at: 600
+    environment: {lux: 180, temperature: 22.8, humidity: 45}
+  - at: 1200
+    environment: {lux: 320, temperature: 23.1, humidity: 46}
+  - at: 1800
+    environment: {lux: 520, temperature: 23.4, humidity: 46}

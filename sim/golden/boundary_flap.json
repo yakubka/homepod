@@ -1,0 +1,16 @@
+[
+  {
+    "at": 0.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "left",
+    "value": 45
+  },
+  {
+    "at": 2.0,
+    "rule": "lighting.zone",
+    "kind": "zone_light",
+    "target": "right",
+    "value": 45
+  }
+]

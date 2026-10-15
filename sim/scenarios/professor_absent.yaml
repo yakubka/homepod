@@ -1,0 +1,14 @@
+name: Professor does not arrive, the announcement path
+events:
+  - at: 0
+    lecture: {id: L4, name: Capstone Design, start: 0, end: 5400, expected: 16}
+    occupancy: {total: 14, zones: {left: 5, center: 9, right: 0}, professor: false}
+    environment: {lux: 70, temperature: 23.0, humidity: 45}
+  - at: 180
+    occupancy: {total: 15, zones: {left: 5, center: 10, right: 0}, professor: false}
+  - at: 330
+    occupancy: {total: 15, zones: {left: 5, center: 10, right: 0}, professor: false}
+  - at: 420
+    occupancy: {total: 15, zones: {left: 5, center: 10, right: 0}, professor: false}
+  - at: 900
+    occupancy: {total: 15, zones: {left: 5, center: 10, right: 0}, professor: false}
