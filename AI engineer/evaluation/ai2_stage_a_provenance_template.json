@@ -1,0 +1,21 @@
+{
+  "recording_id": "TEMPLATE-DO-NOT-USE",
+  "speaker_code": "S01",
+  "consent_reference": "<approved project consent marker, e.g. CONSENT-S01>",
+  "recording_origin": "HARDWARE_ENGINEER_RECORDING",
+  "recording_kind": "SPEECH",
+  "recorded_at": "2026-10-14T15:30:00+09:00",
+  "microphone": "<exact microphone model and firmware as stated by the Hardware Engineer, or UNKNOWN>",
+  "recording_host": "<Raspberry Pi 5 / PC / UNKNOWN>",
+  "distance_m": 1.0,
+  "room_noise_condition": "<quiet / fan on / people talking / UNKNOWN>",
+  "source_filename": "<the original file name>",
+  "declared_format": {
+    "sample_rate": 16000,
+    "channels": 1,
+    "bit_depth": 16
+  },
+  "processing_history": [],
+  "reference_transcript": "<exactly what the speaker was asked to say; omit this field if there is no reference>",
+  "notes": "TEMPLATE - NO HARDWARE RUN YET. Copy, fill in and rename; the harness refuses recording_ids that start with TEMPLATE."
+}

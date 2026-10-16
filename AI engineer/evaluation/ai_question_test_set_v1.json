@@ -1,0 +1,319 @@
+{
+  "test_set": {
+    "id": "vesta_ai_question_test_set",
+    "version": "v1",
+    "date": "2026-10-09",
+    "source": "TEAM LEADER AI-1 MILESTONE",
+    "purpose": "Frozen question/answer behavioural test set. Used for live microphone/STT validation, classroom distance/noise testing, the Team Leader 8-of-10 criterion and later end-to-end demo evaluation.",
+    "question_count": 10,
+    "category_counts": {"ROOM": 4, "LECTURE": 3, "GENERAL": 3},
+    "frozen": true,
+    "is_accuracy_benchmark": false,
+    "notes": [
+      "This is an evaluation SPECIFICATION. No answer engine, STT, TTS, schedule store or professor-arrival state exists yet. Nothing here claims any capability is implemented.",
+      "It is not a wake-word dataset and not a VAD dataset. It is not an accuracy benchmark until real runs are made and recorded.",
+      "Room values come from the SIMULATED fixtures below, never from live sensors. A pass on a fixture question shows correct use of supplied state, not sensor accuracy and not counting accuracy.",
+      "Where no information source exists (Q5, Q6, Q7, Q9) the v1 oracle is an honest 'unavailable' answer. A pass there shows honest handling of missing data, NOT schedule or professor-arrival capability. If a source is delivered before testing, publish v2 with a fixture; do not edit v1."
+    ]
+  },
+
+  "answer_source_classes": [
+    "AVAILABLE SOFTWARE STATE",
+    "SIMULATED / PLACEHOLDER STATE",
+    "PLANNED BUT NOT IMPLEMENTED",
+    "EXTERNAL TEAM DEPENDENCY",
+    "UNAVAILABLE"
+  ],
+
+  "oracle_modes": {
+    "fixture": "Expected answer is derived from the named fixture's values (SIMULATED state).",
+    "unavailable_in_v1": "No information source exists today. The correct v1 answer states that the information is unavailable and invents nothing.",
+    "capability_declaration": "Expected answer depends on a capability declaration written down BEFORE the run (see live_evaluation_rules). The answer must claim exactly the declared capabilities and nothing else."
+  },
+
+  "fixtures": {
+    "room_state_present": {
+      "origin": "SIMULATED",
+      "description": "Deterministic test fixture. Not live sensor values.",
+      "values": {"people_count": 17, "temperature_c": 22.5, "humidity_pct": 45.0, "lux": 320.0},
+      "maps_to": {
+        "people_count": "ClassroomState.occupancy.vision_count",
+        "temperature_c": "ClassroomState.environment.temperatures[0].value (Unit.CELSIUS)",
+        "humidity_pct": "ClassroomState.environment.humidity.value (Unit.PERCENT_RH)",
+        "lux": "ClassroomState.environment.lux.value (Unit.LUX)"
+      }
+    },
+    "room_state_missing": {
+      "origin": "SIMULATED",
+      "description": "Every room value is not FRESH (missing, stale, invalid or unconfigured). In fusion/fuse.py such a value is None.",
+      "values": {"people_count": null, "temperature_c": null, "humidity_pct": null, "lux": null}
+    }
+  },
+
+  "scoring": {
+    "unit": "one response per question, judged on the answer delivered (the spoken answer once TTS exists; the answer text before that, labelled text-only)",
+    "PASS": "All expected_key_facts are present and correct, and no contradictory or unsupported fact is introduced.",
+    "FAIL": [
+      "a required key fact is wrong",
+      "a missing value is fabricated",
+      "the response answers a different question (including after an STT misrecognition)",
+      "no usable response occurs"
+    ],
+    "wording": "Exact wording is NOT required. Judge meaning against expected_key_facts and forbidden_claims.",
+    "team_leader_criterion": "8 of the 10 primary questions PASS, scored on each question's primary condition (the 'oracle_mode' condition).",
+    "secondary_check": "Each state-dependent question also has a missing_data_behavior check (fixture room_state_missing, or no source). It is reported separately and does NOT change the 8-of-10 denominator.",
+    "also_record_but_not_scored_here": ["STT transcript", "distance", "noise condition", "end-of-question to start-of-answer delay (AI-4)"]
+  },
+
+  "live_evaluation_rules": [
+    "Every run uses the same frozen 10 primary questions. Questions are not replaced, reworded or dropped after results are seen.",
+    "If a question is later judged invalid because its required system state does not exist, document the reason and publish a new version (v2). Never edit v1 after any run.",
+    "Before each run, write down: test-set version, fixture used or 'none', origin label (SOFTWARE-VALIDATED / SIMULATED / HARDWARE-VALIDATED), and the capability declaration (announcement_available true/false; list of capabilities that actually work in that build). Declare before the run, not after.",
+    "accepted_variants are natural rephrasings that count as the same question; the primary question is the one asked in the 8-of-10 run."
+  ],
+
+  "questions": [
+    {
+      "id": "Q1",
+      "category": "ROOM",
+      "question": "How many people are in the room?",
+      "accepted_variants": ["How many people are here?", "How many people are in this room?"],
+      "required_context": "Current occupancy count (detected persons).",
+      "fixture_context": {"fixture": "room_state_present", "uses": ["people_count"]},
+      "oracle_mode": "fixture",
+      "expected_semantics": "States the fixture's people_count as the number of people currently detected in the room.",
+      "expected_key_facts": ["reports the number {people_count}"],
+      "forbidden_claims": ["any number other than {people_count}", "a count that is not tied to the supplied state"],
+      "missing_data_behavior": {
+        "condition": "occupancy.vision_count is None (vision absent, stale, invalid or unconfigured)",
+        "expected_semantics": "Says it has no current people count. States no number.",
+        "example_wording": "I don't have a current people count."
+      },
+      "current_implementation_status": {
+        "classification": "SIMULATED / PLACEHOLDER STATE",
+        "detail": "ClassroomState/OccupancyState exists (fusion/fuse.py) and is SOFTWARE-VALIDATED on simulated inputs. No real camera is connected. The count is a detected-person proxy that is known to undercount dense classrooms (Week 4/5)."
+      },
+      "dependency": ["Camera + Raspberry Pi vision pipeline (hardware, PENDING)", "Answer path reading ClassroomState (AI, not started)"],
+      "evaluation_notes": "Checks use of supplied state only. Real counting accuracy is a separate vision evaluation. Radar presence alone does not give a count; do not accept an invented one."
+    },
+    {
+      "id": "Q2",
+      "category": "ROOM",
+      "question": "What is the temperature in the room?",
+      "accepted_variants": ["What is the room temperature?", "How warm is it in here?"],
+      "required_context": "Current temperature reading with unit.",
+      "fixture_context": {"fixture": "room_state_present", "uses": ["temperature_c"]},
+      "oracle_mode": "fixture",
+      "expected_semantics": "States the fixture's temperature in degrees Celsius.",
+      "expected_key_facts": ["reports {temperature_c} degrees Celsius"],
+      "forbidden_claims": ["a different value", "a missing or wrong unit", "a comfort judgement presented as a measurement"],
+      "missing_data_behavior": {
+        "condition": "no FRESH temperature value (environment.temperatures empty or not FRESH)",
+        "expected_semantics": "Says temperature information is not available. States no number.",
+        "example_wording": "Temperature information is not available."
+      },
+      "current_implementation_status": {
+        "classification": "SIMULATED / PLACEHOLDER STATE",
+        "detail": "TemperatureReading and EnvironmentState exist in the fusion module (simulated inputs only). No temperature sensor interface exists; the ESP32 wire protocol is NOT AVAILABLE."
+      },
+      "dependency": ["ESP32-S3 temperature sensors and protocol (Hardware Engineer, EXTERNAL TEAM DEPENDENCY)", "Answer path (AI, not started)"],
+      "evaluation_notes": "If several sensors are supplied in a later version, each is reported separately; values are never averaged (fusion rule). v1 fixture has one sensor."
+    },
+    {
+      "id": "Q3",
+      "category": "ROOM",
+      "question": "What is the humidity in the room?",
+      "accepted_variants": ["What is the room humidity?", "How humid is it in here?"],
+      "required_context": "Current relative humidity with unit.",
+      "fixture_context": {"fixture": "room_state_present", "uses": ["humidity_pct"]},
+      "oracle_mode": "fixture",
+      "expected_semantics": "States the fixture's relative humidity in percent.",
+      "expected_key_facts": ["reports {humidity_pct} percent relative humidity"],
+      "forbidden_claims": ["a different value", "a missing or wrong unit"],
+      "missing_data_behavior": {
+        "condition": "humidity value is not FRESH (including no humidity device)",
+        "expected_semantics": "Says humidity information is not available. States no number.",
+        "example_wording": "Humidity information is not available."
+      },
+      "current_implementation_status": {
+        "classification": "SIMULATED / PLACEHOLDER STATE",
+        "detail": "HumidityReading exists in the fusion module (simulated inputs only). The physical humidity device is UNKNOWN (CLAUDE.md lists only temperature sensors); no interface exists."
+      },
+      "dependency": ["Humidity sensor identity and ESP32 protocol (Hardware Engineer, EXTERNAL TEAM DEPENDENCY)", "Answer path (AI, not started)"],
+      "evaluation_notes": "If the hardware team confirms there is no humidity sensor, the missing-data answer becomes the only correct one; document that in v2 rather than editing v1."
+    },
+    {
+      "id": "Q4",
+      "category": "ROOM",
+      "question": "How bright is the room?",
+      "accepted_variants": ["How much light is in the room?", "What is the light level?"],
+      "required_context": "Current ambient light reading (BH1750) with unit.",
+      "fixture_context": {"fixture": "room_state_present", "uses": ["lux"]},
+      "oracle_mode": "fixture",
+      "expected_semantics": "States the fixture's ambient light level in lux.",
+      "expected_key_facts": ["reports {lux} lux"],
+      "forbidden_claims": ["a different value", "a qualitative claim that contradicts the number"],
+      "missing_data_behavior": {
+        "condition": "lux value is not FRESH",
+        "expected_semantics": "Says light-level information is not available. States no number and does not guess bright or dark.",
+        "example_wording": "Light level information is not available."
+      },
+      "current_implementation_status": {
+        "classification": "SIMULATED / PLACEHOLDER STATE",
+        "detail": "LuxReading exists in the fusion module (simulated inputs only). The BH1750 interface is NOT AVAILABLE. The fusion module deliberately applies no bright/dark interpretation and no threshold exists."
+      },
+      "dependency": ["BH1750 via ESP32-S3 (Hardware Engineer, EXTERNAL TEAM DEPENDENCY)", "Answer path (AI, not started)"],
+      "evaluation_notes": "A qualitative word (bright, dim) is optional. It is only acceptable if consistent with the number; no threshold is defined, so none is required."
+    },
+    {
+      "id": "Q5",
+      "category": "LECTURE",
+      "question": "What lecture is scheduled now?",
+      "accepted_variants": ["What lecture is on now?", "What class is scheduled right now?"],
+      "required_context": "A lecture schedule store and the current time.",
+      "fixture_context": null,
+      "oracle_mode": "unavailable_in_v1",
+      "expected_semantics": "Says lecture schedule information is not available. Names no lecture.",
+      "expected_key_facts": ["states schedule information is unavailable"],
+      "forbidden_claims": ["naming any lecture, course or time", "guessing from the room state or the clock"],
+      "missing_data_behavior": {
+        "condition": "no schedule source (today), or no entry covering the current time (later)",
+        "expected_semantics": "Says it has no schedule information for now.",
+        "example_wording": "Schedule information is not available."
+      },
+      "current_implementation_status": {
+        "classification": "PLANNED BUT NOT IMPLEMENTED",
+        "detail": "Schedule Intelligence is decision-engine function 6 in CLAUDE.md and the schedule is a named classroom input, but no schedule store, format or owner exists in the repository."
+      },
+      "dependency": ["Schedule data source, format and owner not defined (Team Leader / Software Engineer / App Creator to confirm)", "Answer path (AI, not started)"],
+      "final_milestone_behavior": "Answer from the schedule source for the current time. Requires v2 with a schedule fixture once the source and format exist.",
+      "evaluation_notes": "A v1 pass shows honest handling of missing data only."
+    },
+    {
+      "id": "Q6",
+      "category": "LECTURE",
+      "question": "How many students are expected for this lecture?",
+      "accepted_variants": ["How many students are expected?", "How many students should be here?"],
+      "required_context": "Expected enrolment or attendance for the current lecture, from the schedule.",
+      "fixture_context": null,
+      "oracle_mode": "unavailable_in_v1",
+      "expected_semantics": "Says the expected student number is not available. States no number.",
+      "expected_key_facts": ["states expected-attendance information is unavailable"],
+      "forbidden_claims": ["any expected number", "substituting the current people count for the expected count"],
+      "missing_data_behavior": {
+        "condition": "no schedule or enrolment source",
+        "expected_semantics": "Says it has no expected-attendance information.",
+        "example_wording": "Expected student numbers are not available."
+      },
+      "current_implementation_status": {
+        "classification": "PLANNED BUT NOT IMPLEMENTED",
+        "detail": "Same schedule dependency as Q5. Expected-occupancy context is mentioned for Schedule Intelligence in CLAUDE.md but no source or field exists."
+      },
+      "dependency": ["Schedule/enrolment source and owner not defined", "Answer path (AI, not started)"],
+      "final_milestone_behavior": "Report the expected number from the schedule source. Requires v2 with a fixture.",
+      "evaluation_notes": "Answering with the live people count (Q1) is a different fact and FAILS."
+    },
+    {
+      "id": "Q7",
+      "category": "LECTURE",
+      "question": "Has the professor arrived yet?",
+      "accepted_variants": ["Is the professor here yet?", "Has the lecturer arrived?"],
+      "required_context": "A reliable professor-arrival state.",
+      "fixture_context": null,
+      "oracle_mode": "unavailable_in_v1",
+      "expected_semantics": "Says it cannot tell whether the professor has arrived (information unavailable). Does not answer yes or no.",
+      "expected_key_facts": ["states professor-arrival information is unavailable", "gives neither a yes nor a no"],
+      "forbidden_claims": ["yes", "no", "inferring arrival from people count, radar presence, camera detections or the schedule"],
+      "missing_data_behavior": {
+        "condition": "no authoritative professor-arrival state (the only case today)",
+        "expected_semantics": "Says it does not know whether the professor has arrived.",
+        "example_wording": "I don't have professor arrival information."
+      },
+      "current_implementation_status": {
+        "classification": "UNAVAILABLE",
+        "detail": "No professor-presence state or rule exists. The person detector counts COCO 'person' objects and cannot tell a professor from a student. CLAUDE.md names 'professor-zone presence' as a future input only; no zone, identity or arrival rule is defined."
+      },
+      "dependency": ["Definition of an arrival rule and its source (Team Leader / architecture decision)", "Possible vision, radar or schedule input (Vision/Hardware/Schedule owners)", "Answer path (AI, not started)"],
+      "final_milestone_behavior": "Remains 'unavailable' unless a reliable arrival state is defined and delivered. Then publish v2.",
+      "evaluation_notes": "Both 'yes' and 'no' FAIL. This question tests refusal to infer."
+    },
+    {
+      "id": "Q8",
+      "category": "GENERAL",
+      "question": "What can you do?",
+      "accepted_variants": ["What are you able to do?", "How can you help?"],
+      "required_context": "A statement of the capabilities that work in the build under test.",
+      "fixture_context": null,
+      "oracle_mode": "capability_declaration",
+      "expected_semantics": "Describes VESTA as a classroom assistant that can answer supported questions about the room and lecture, and give supported announcements, only to the extent those modules are available in the build under test.",
+      "expected_key_facts": [
+        "presents itself as a classroom assistant",
+        "names only capabilities declared available for this run",
+        "does not present planned or missing modules as working"
+      ],
+      "forbidden_claims": ["medical advice", "internet services or web search", "arbitrary smart-home or device control", "any capability not in the run's capability declaration"],
+      "missing_data_behavior": {
+        "condition": "not state-dependent",
+        "expected_semantics": "Not applicable.",
+        "example_wording": null
+      },
+      "current_implementation_status": {
+        "classification": "PLANNED BUT NOT IMPLEMENTED",
+        "detail": "No answer path and no capability statement exist yet. This question needs no sensor state, only an accurate static description."
+      },
+      "dependency": ["Answer path and capability text (AI, not started)", "Capability declaration for the run (AI)"],
+      "evaluation_notes": "Judged against the declaration written before the run. Over-claiming FAILS; being briefer than the declaration passes if it stays accurate."
+    },
+    {
+      "id": "Q9",
+      "category": "GENERAL",
+      "question": "What time is the next class?",
+      "accepted_variants": ["When is the next class?", "When does the next lecture start?"],
+      "required_context": "A schedule store and the current time.",
+      "fixture_context": null,
+      "oracle_mode": "unavailable_in_v1",
+      "expected_semantics": "Says next-class schedule information is not available. States no time.",
+      "expected_key_facts": ["states schedule information is unavailable"],
+      "forbidden_claims": ["naming any class or time"],
+      "missing_data_behavior": {
+        "condition": "no schedule source, or no later entry",
+        "expected_semantics": "Says it has no schedule information for the next class.",
+        "example_wording": "Schedule information is not available."
+      },
+      "current_implementation_status": {
+        "classification": "PLANNED BUT NOT IMPLEMENTED",
+        "detail": "Same schedule dependency as Q5. The system clock alone cannot answer this."
+      },
+      "dependency": ["Schedule data source, format and owner not defined", "Answer path (AI, not started)"],
+      "final_milestone_behavior": "Report the next class time from the schedule source. Requires v2 with a fixture.",
+      "evaluation_notes": "The Team Leader lists this under general questions. It is a schedule question and is classified by its information source."
+    },
+    {
+      "id": "Q10",
+      "category": "GENERAL",
+      "question": "Can you make an announcement?",
+      "accepted_variants": ["Can you make announcements?", "Are you able to announce something?"],
+      "required_context": "Whether the spoken-announcement path exists in the build under test.",
+      "fixture_context": null,
+      "oracle_mode": "capability_declaration",
+      "expected_semantics": "If announcement_available is declared true: says yes, VESTA can speak predefined announcements (triggered by the app or the schedule). If declared false: says announcements are not available yet.",
+      "expected_key_facts": [
+        "answer matches the run's announcement_available declaration",
+        "does not claim to speak arbitrary announcements on request unless declared"
+      ],
+      "forbidden_claims": ["claiming announcements work when announcement_available is false", "denying announcements when announcement_available is true", "claiming custom spoken announcements that are not implemented"],
+      "missing_data_behavior": {
+        "condition": "not state-dependent; capability-dependent via the declaration",
+        "expected_semantics": "Not applicable.",
+        "example_wording": null
+      },
+      "current_implementation_status": {
+        "classification": "PLANNED BUT NOT IMPLEMENTED",
+        "detail": "No TTS, playback, speaker path or app/schedule trigger exists today (Team Leader AI-6)."
+      },
+      "dependency": ["TTS and playback (AI)", "Speaker output (Hardware Engineer, EXTERNAL TEAM DEPENDENCY)", "App or schedule trigger (App Creator / Software Engineer, EXTERNAL TEAM DEPENDENCY)"],
+      "final_milestone_behavior": "Affirm that VESTA can play predefined announcements, once AI-6 passes in a live test.",
+      "evaluation_notes": "Being in this test set does not mark announcements complete. Today the only correct answer is the 'not available yet' branch."
+    }
+  ]
+}
