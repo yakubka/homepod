@@ -1,4 +1,4 @@
-# Generated from contracts/schemas, contract 1.0.0. Do not edit.
+# Generated from contracts/schemas, contract 1.0.1. Do not edit.
 # Regenerate with: python contracts/generate.py
 
 from __future__ import annotations

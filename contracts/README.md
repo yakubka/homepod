@@ -6,9 +6,9 @@ the ESP32 agree on. If code and contract disagree, the code is wrong. Current ve
 
 ```
  Flutter app ──HTTP + SSE──▶ api ─┐                 ┌─ vision (camera)
-                                  │   MQTT bus on   │
+                                  │  event bus in   │
             recorder ◀────────────┼── the Pi ───────┼─ voice (mic, speaker)
-                                  │  room/v1/#      │
+                                  │  services.core  │
                           engine ─┘                 └─ bridge ──USB serial──▶ ESP32
                                                                  (lights, fan, ring, PIR, sensors)
 ```

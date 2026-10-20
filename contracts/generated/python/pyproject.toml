@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "room-contracts"
-version = "1.0.0"
+version = "1.0.1"
 description = "Generated models for the room controller interface contract."
 requires-python = ">=3.10"
 dependencies = ["pydantic>=2.6,<3"]

@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// Generated from contracts/schemas, contract 1.0.0.
+// Generated from contracts/schemas, contract 1.0.1.
 // Regenerate with: python contracts/generate.py
 //
 // ignore_for_file: constant_identifier_names, prefer_null_aware_operators
@@ -44,7 +44,7 @@
 
 import 'dart:convert';
 
-const String contractVersion = "1.0.0";
+const String contractVersion = "1.0.1";
 
 ErrorResponse errorResponseFromJson(String str) => ErrorResponse.fromJson(json.decode(str));
 

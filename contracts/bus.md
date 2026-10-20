@@ -1,6 +1,6 @@
 # Internal event bus, v1
 
-How the processes on the Pi talk to each other. Payload shapes are pinned by `schemas/`, the envelope
+How the services on the Pi talk to each other. Payload shapes are pinned by `schemas/`, the envelope
 by `schemas/BusEnvelope.json`, which also fixes the payload schema and the publisher of every topic.
 Every JSON block below is validated by `validate.py`.
 
@@ -8,20 +8,21 @@ Every JSON block below is validated by `validate.py`.
 
 | Item | Value |
 |------|-------|
-| Broker | Mosquitto on the Pi, `127.0.0.1:1883`, MQTT 3.1.1, bound to localhost, no authentication |
-| Topic names | `room/v1/` plus the logical name with dots replaced by slashes. `sensor.environment` is `room/v1/sensor/environment`. |
-| Payload | One `BusEnvelope` as compact UTF-8 JSON, at most 64 KiB |
-| Client id | The component name: `api`, `engine`, `voice`, `vision`, `bridge`, `recorder` |
-| Keepalive | 10 s. Every client sets a last will on `room/v1/system/heartbeat` with its own `Heartbeat`, status `down`, so a crash is visible within 15 s. |
-| Delivery | QoS 1 topics are at least once. Consumers drop duplicates by envelope `id`, keeping the last 1000 ids. |
-| Ordering | Per topic and publisher only. Consumers that join topics order by envelope `ts`. |
+| Implementation | `services/core/bus.py`, one asyncio bus inside the `python -m services.core` process. Every lane runs as a service in that process. |
+| Topic names | The logical names below. Subscriptions may use `*` for one segment and `#` for the rest: `sensor.*`, `device.#`, `#`. |
+| Payload | One `BusEnvelope` dict, checked against `schemas/BusEnvelope.json` on every publish. With `VESTA_STRICT=1` a violation raises `ContractViolation` and is not delivered, otherwise it is logged as a warning and delivered. |
+| Queues | One bounded queue per subscriber, `bus.queue_size` deep, 256 by default. When it is full the oldest envelope is dropped and counted in the subscription's `dropped`. Publishing never waits. |
+| Last value | The latest envelope of every topic is kept. Topics marked replayed below are delivered to a new subscriber at once, so a late starter sees the current state. Events and commands are never replayed. |
+| Liveness | Every service publishes `system.heartbeat` every 5 s through the `Service` base class. |
+| Ordering | Per topic, in publish order. |
+| Threads | Code running in a thread publishes with `publish_threadsafe`, never `publish`. |
 
 ## 2. Envelope
 
 | Field | Rule |
 |-------|------|
 | `id` | `evt_` plus at least 10 random lowercase base36 characters, unique per message. Re-publishing the same message keeps the id. |
-| `topic` | Logical topic name, equal to the MQTT topic it is published on. |
+| `topic` | Logical topic name. |
 | `ts` | Publish time on the Pi clock, ISO 8601 UTC with `Z`. All Pi processes share one NTP synced clock. |
 | `source` | Publishing component. Must match the publisher column below. |
 | `contract_version` | Contents of `contracts/VERSION` the publisher was built against. |
@@ -30,23 +31,23 @@ Every JSON block below is validated by `validate.py`.
 
 ## 3. Topics
 
-| Topic | Payload | Publisher | Subscribers | Rate | QoS | Retained |
-|-------|---------|-----------|-------------|------|-----|----------|
-| `sensor.environment` | EnvironmentReading | bridge | engine, recorder, api | every sensor_report, 0.5 Hz, up to 5 Hz on PIR bursts | 0 | no |
-| `sensor.presence` | PresenceReading | bridge | engine, api | every sensor_report, as above | 0 | no |
-| `perception.occupancy` | OccupancySnapshot | vision | engine, recorder, api | 1 Hz, plus at once on a count change, at most 2 Hz | 0 | no |
-| `voice.wake` | VoiceWake | voice | engine, api | per wake word, at most 1 per 2 s | 1 | no |
-| `voice.transcript` | VoiceTranscript | voice, api | voice, recorder, api | per utterance or POST /voice/ask | 1 | no |
-| `voice.intent` | VoiceCommand | voice | engine, api | per transcript, within 1 s of it | 1 | no |
-| `control.request` | ControlRequest | api | engine | per actuator HTTP call | 1 | no |
-| `decision.action` | Decision | engine | api, voice, recorder | per decision, typically under 1 Hz, bursts up to 10 Hz | 1 | no |
-| `device.command` | DeviceCommand without `seq` | engine | bridge | per command, at most 20 Hz | 1 | no |
-| `device.ack` | DeviceAck | bridge | engine, api | exactly one per device.command | 1 | no |
-| `device.status` | DeviceLink | bridge | engine, api | on change and every 5 s | 1 | yes |
-| `schedule.lecture` | LectureEvent | api | engine | per lecture change, start and end | 1 | no |
-| `settings.changed` | Settings | api | engine, voice | at API start and per PATCH /settings | 1 | yes |
-| `system.heartbeat` | Heartbeat | every component | api | every 5 s per component | 0 | no |
-| `system.state` | SystemState | engine | api | on change at most 2 Hz, and every 5 s | 1 | yes |
+| Topic | Payload | Publisher | Subscribers | Rate | Replayed |
+|-------|---------|-----------|-------------|------|----------|
+| `sensor.environment` | EnvironmentReading | bridge | engine, recorder, api | every sensor_report, 0.5 Hz, up to 5 Hz on PIR bursts | yes |
+| `sensor.presence` | PresenceReading | bridge | engine, api | every sensor_report, as above | yes |
+| `perception.occupancy` | OccupancySnapshot | vision | engine, recorder, api | 1 Hz, plus at once on a count change, at most 2 Hz | yes |
+| `voice.wake` | VoiceWake | voice | engine, api | per wake word, at most 1 per 2 s | no |
+| `voice.transcript` | VoiceTranscript | voice, api | voice, recorder, api | per utterance or POST /voice/ask | no |
+| `voice.intent` | VoiceCommand | voice | engine, api | per transcript, within 1 s of it | no |
+| `control.request` | ControlRequest | api | engine | per actuator HTTP call | no |
+| `decision.action` | Decision | engine | api, voice, recorder | per decision, typically under 1 Hz, bursts up to 10 Hz | no |
+| `device.command` | DeviceCommand without `seq` | engine | bridge | per command, at most 20 Hz | no |
+| `device.ack` | DeviceAck | bridge | engine, api | exactly one per device.command | no |
+| `device.status` | DeviceLink | bridge | engine, api | on change and every 5 s | yes |
+| `schedule.lecture` | LectureEvent | api | engine | per lecture change, start and end | no |
+| `settings.changed` | Settings | api | engine, voice | at API start and per PATCH /settings | yes |
+| `system.heartbeat` | Heartbeat | every component | api | every 5 s per component | yes |
+| `system.state` | SystemState | engine | api | on change at most 2 Hz, and every 5 s | yes |
 
 `api` subscribes to every topic it relays over `GET /events`. Only the publisher listed may publish a
 topic. The engine is the only component that issues `device.command`, and every command belongs to
@@ -228,7 +229,7 @@ Full settings after every change, retained. Consumers replace their copy, they n
 ### `system.heartbeat`
 
 Every component, every 5 s. `payload.component` equals the envelope `source`. The API derives
-`GET /health` from these and from its own broker and database connections.
+`GET /health` from these and from its own bus and database connections.
 
 <!-- schema: BusEnvelope -->
 ```json

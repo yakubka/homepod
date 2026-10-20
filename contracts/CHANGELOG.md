@@ -21,6 +21,13 @@
    safe after the freeze.
 6. MAJOR is reserved for the next contract after this sprint.
 
+## 1.0.1, 2026-10-20
+
+- `bus.md`: the bus runs in process, `services/core/bus.py`, as V-02 specifies. The MQTT
+  transport, QoS and broker rows are replaced by queue, drop, replay and strict validation rules.
+  Topics, payloads and publishers are unchanged.
+- `README.md`: diagram updated to match.
+
 ## 1.0.0, 2026-10-13
 
 First frozen contract.

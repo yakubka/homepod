@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Room Controller API
-  version: 1.0.0
+  version: 1.0.1
   summary: HTTP interface between the mobile app and the room Pi.
   description: |
     Contract v1 for the app, the API, the engine, the voice stack, the vision stack and the ESP32.
