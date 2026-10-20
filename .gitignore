@@ -14,3 +14,5 @@ contracts/generated/dart/pubspec.lock
 node_modules/
 Thumbs.db
 config/local.yaml
+models/*
+!models/README.md

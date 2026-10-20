@@ -77,6 +77,14 @@ DEFAULTS = {
     "state.stale.system": 15.0,
     "state.stale.decision": 3600.0,
     "state.stale.heartbeat": 15.0,
+    "models.dir": "models",
+    "models.memory_ceiling_mb": 1200,
+    "models.base_mb": 250,
+    "models.cores": 4,
+    "models.heavy_permits": 1,
+    "guard.interval": 5.0,
+    "guard.p95_factor": 3.0,
+    "guard.cooldown": 30.0,
 }
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))

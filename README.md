@@ -43,6 +43,11 @@ services/core/service.py      start, stop and health, the interface every lane i
 services/core/config.py       layered settings and the VESTA_MODE switch
 services/core/mode.py         picks the replay, sim or real implementation of a source
 services/core/logs.py         JSON line logging with a trace id per interaction
+services/core/models.py       model registry, lazy load with warmup, eviction, pinned threads
+services/core/scheduler.py    priority scheduler for heavy inference, voice before vision
+services/core/guard.py        memory and latency guard, publishes system.degraded
+eval/bench_models.py          model benchmark, report in eval/reports/models.md
+docs/budget.md                per model core and memory allowance every lane is accepted against
 services/recorder/            keeps bus history
 contracts/                    interface contract, schemas and generated models
 config/default.yaml           committed defaults, config/local.yaml overrides them per machine

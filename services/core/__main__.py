@@ -15,7 +15,10 @@ import threading
 
 from services.core import config, logs
 from services.core.bus import Bus
+from services.core.guard import RuntimeGuard
+from services.core.models import Registry
 from services.core.registry import SERVICES
+from services.core.scheduler import Scheduler
 from services.core.service import Context
 from services.core.state import StateStore
 from services.core.supervisor import StartupError, Supervisor, Watchdog, load
@@ -44,12 +47,23 @@ async def run(run_for=None, specs=SERVICES):
     bus.attach(loop)
     state = StateStore(bus)
     await state.start()
+    scheduler = Scheduler(permits=cfg["models.heavy_permits"])
+    models = Registry(scheduler=scheduler)
+    guard = RuntimeGuard(models, lambda topic, payload: bus.publish_threadsafe(topic, payload, "core"))
+    models.observe = guard.observe
     supervisor = Supervisor(
         load(specs),
-        Context(bus=bus, state=state, config=cfg, mode=config.MODE),
+        Context(bus=bus, state=state, config=cfg, mode=config.MODE, models=models, scheduler=scheduler),
         start_timeout=cfg["service.start_timeout"],
         stop_timeout=cfg["service.stop_timeout"],
     )
+
+    async def watch_memory():
+        while True:
+            await asyncio.sleep(cfg["guard.interval"])
+            guard.check_memory()
+
+    watcher = asyncio.create_task(watch_memory(), name="guard")
     try:
         await supervisor.start()
         log.info("core ready", extra={"mode": config.MODE, "strict": bus.strict, "services": list(supervisor.health())})
@@ -60,8 +74,10 @@ async def run(run_for=None, specs=SERVICES):
         log.info("core stopping")
     finally:
         watchdog = Watchdog(cfg["shutdown.timeout"]).start()
+        watcher.cancel()
         await supervisor.stop()
         await state.stop()
+        models.unload()
         watchdog.cancel()
     log.info("core stopped", extra={"bus": {"published": bus.published, "violations": bus.violations}})
 

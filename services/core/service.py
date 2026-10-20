@@ -28,6 +28,8 @@ class Context:
     state: object
     config: dict
     mode: str
+    models: object = None
+    scheduler: object = None
 
 
 class Service:
@@ -49,6 +51,18 @@ class Service:
         self.started_at = time.monotonic()
         self.tick()
         self.spawn(self._heartbeat(), "heartbeat")
+        self.spawn(self._degradations(), "degraded")
+
+    def on_degraded(self, event):
+        """Override to switch to a fallback when core reports a budget breach, see system.degraded."""
+
+    async def _degradations(self):
+        sub = self.bus.subscribe("system.degraded", name=f"{self.name}.degraded", maxsize=16)
+        try:
+            async for envelope in sub:
+                self.on_degraded(envelope["payload"])
+        finally:
+            sub.close()
 
     async def stop(self):
         for task in self.tasks:

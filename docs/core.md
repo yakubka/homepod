@@ -60,6 +60,30 @@ room.environment.stale                 # older than state.stale.environment
 room.stale_fields()                    # every stale field, heartbeats included
 ```
 
+## Models
+
+Never build an inference session. Ask the registry, it loads on first use, warms up, pins threads
+and keeps the room inside `docs/budget.md`:
+
+```python
+from services.core.models import Priority
+
+models, scheduler = self.ctx.models, self.ctx.scheduler
+
+# voice: open a burst so vision yields, run through the scheduler
+with scheduler.burst(Priority.VOICE):
+    text = await asyncio.to_thread(models.infer, "stt", audio)
+
+# vision: skip the frame while voice is busy
+if scheduler.should_yield(Priority.VISION):
+    return
+boxes = await asyncio.to_thread(models.infer, "detector", frame)
+```
+
+A new model is one `ModelSpec` line in `services/core/models.py` with its memory, threads, priority
+and p95, then a rerun of `eval/bench_models.py`. Override `on_degraded(event)` in your service to
+switch to a fallback when core publishes `system.degraded`.
+
 ## Picking an implementation
 
 `VESTA_MODE` is the only switch. Nothing else may check for hardware.
