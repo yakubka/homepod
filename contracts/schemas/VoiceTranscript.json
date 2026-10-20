@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VoiceTranscript",
+  "description": "Final transcript of one utterance, published on voice.transcript. Partial transcripts are never published. The API publishes one with source app for every POST /voice/ask so both paths reach the same parser.",
+  "type": "object",
+  "required": ["request_id", "ts", "text", "confidence", "language", "source", "duration_ms"],
+  "additionalProperties": false,
+  "properties": {
+    "request_id": { "$ref": "common.json#/$defs/RequestId", "description": "Correlation id of the request." },
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "End of utterance, or API receipt time for source app, ISO 8601 UTC." },
+    "text": { "type": "string", "maxLength": 200, "description": "Recognised text, at most 200 characters, empty when nothing was understood." },
+    "confidence": { "$ref": "common.json#/$defs/Confidence", "description": "Recogniser confidence, 0.0 to 1.0, 1.0 for source app." },
+    "language": { "type": "string", "pattern": "^[a-z]{2}(-[A-Z]{2})?$", "description": "Recognition language as a BCP 47 tag." },
+    "source": { "$ref": "VoiceCommand.json#/$defs/VoiceSource", "description": "microphone or app." },
+    "duration_ms": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 30000,
+      "description": "Audio length, milliseconds, integer 0 to 30000, null for source app."
+    }
+  },
+  "examples": [
+    {
+      "request_id": "req_8d1f6g3h2j",
+      "ts": "2026-10-13T09:30:12.380Z",
+      "text": "set the left lights to forty percent",
+      "confidence": 0.91,
+      "language": "en-US",
+      "source": "microphone",
+      "duration_ms": 2140
+    }
+  ]
+}

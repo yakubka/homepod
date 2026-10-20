@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ZoneLightRequest",
+  "description": "Request body of POST /lighting/zone. Sets one zone and switches the lighting mode to manual. The other zones keep their current brightness.",
+  "type": "object",
+  "required": ["zone", "brightness"],
+  "additionalProperties": false,
+  "properties": {
+    "zone": { "$ref": "common.json#/$defs/Zone", "description": "Zone." },
+    "brightness": { "$ref": "common.json#/$defs/Brightness", "description": "Brightness, percent 0 to 100." },
+    "fade_ms": { "$ref": "common.json#/$defs/FadeMs", "description": "Fade, milliseconds 0 to 5000, default 400." }
+  },
+  "examples": [{ "zone": "professor", "brightness": 100 }, { "zone": "left", "brightness": 40, "fade_ms": 1000 }]
+}

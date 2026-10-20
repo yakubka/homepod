@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LectureCreate",
+  "description": "Request body of POST /lectures. The API assigns id, status, created_at and updated_at. Omitted optional fields take the defaults stated below.",
+  "type": "object",
+  "required": ["title", "lecturer", "starts_at", "ends_at"],
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "maxLength": 120, "description": "Lecture title, 1 to 120 characters." },
+    "course_code": { "type": ["string", "null"], "maxLength": 20, "description": "Course code, default null." },
+    "lecturer": { "type": "string", "minLength": 1, "maxLength": 80, "description": "Lecturer display name, 1 to 80 characters." },
+    "starts_at": { "$ref": "common.json#/$defs/Timestamp", "description": "Start, ISO 8601 UTC." },
+    "ends_at": { "$ref": "common.json#/$defs/Timestamp", "description": "End, ISO 8601 UTC, strictly after starts_at, at most 6 hours after it." },
+    "lighting_mode": {
+      "$ref": "Lecture.json#/$defs/LectureLightingMode",
+      "description": "Lighting mode applied at start, default lecture."
+    },
+    "notes": { "type": ["string", "null"], "maxLength": 500, "description": "Free text, at most 500 characters, default null." }
+  },
+  "examples": [
+    {
+      "title": "Distributed Systems, week 7",
+      "course_code": "CS301",
+      "lecturer": "Dr. Karimova",
+      "starts_at": "2026-10-13T09:00:00.000Z",
+      "ends_at": "2026-10-13T10:30:00.000Z",
+      "lighting_mode": "presentation",
+      "notes": "Guest talk in the second half."
+    }
+  ]
+}

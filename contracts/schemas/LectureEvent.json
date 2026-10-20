@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LectureEvent",
+  "description": "Change in the lecture schedule, published by the API on schedule.lecture. created, updated and deleted follow the HTTP calls. started and ended are emitted by the API scheduler within 1 second of starts_at and ends_at. The engine applies lighting_mode and the default climate target on started.",
+  "type": "object",
+  "required": ["event", "ts", "lecture"],
+  "additionalProperties": false,
+  "properties": {
+    "event": { "$ref": "#/$defs/LectureEventType", "description": "What happened." },
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Event time, ISO 8601 UTC." },
+    "lecture": { "$ref": "Lecture.json", "description": "Lecture after the change, or the last state for deleted." }
+  },
+  "$defs": {
+    "LectureEventType": {
+      "title": "LectureEventType",
+      "description": "Schedule event type.",
+      "type": "string",
+      "enum": ["created", "updated", "deleted", "started", "ended"]
+    }
+  },
+  "examples": [
+    {
+      "event": "started",
+      "ts": "2026-10-13T09:00:00.300Z",
+      "lecture": {
+        "id": "lec_7f3k2m9q1x",
+        "title": "Distributed Systems, week 7",
+        "course_code": "CS301",
+        "lecturer": "Dr. Karimova",
+        "starts_at": "2026-10-13T09:00:00.000Z",
+        "ends_at": "2026-10-13T10:30:00.000Z",
+        "status": "in_progress",
+        "lighting_mode": "presentation",
+        "notes": null,
+        "created_at": "2026-10-10T14:02:11.000Z",
+        "updated_at": "2026-10-10T14:02:11.000Z"
+      }
+    }
+  ]
+}

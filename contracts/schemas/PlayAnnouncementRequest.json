@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PlayAnnouncementRequest",
+  "description": "Optional request body of POST /announcements/{id}/play. An empty object or no body plays at the volume from Settings.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "volume": { "$ref": "common.json#/$defs/Volume", "description": "Volume for this playback only, percent 0 to 100." }
+  },
+  "examples": [{ "volume": 70 }, {}]
+}
