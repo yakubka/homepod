@@ -1,0 +1,64 @@
+name: contracts
+
+on:
+  push:
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts.yml"
+  pull_request:
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: dart-lang/setup-dart@v1
+      - run: pip install -r contracts/requirements.txt
+      - run: npm ci --prefix contracts
+      - name: Schemas, examples and cross-file rules
+        run: python contracts/validate.py
+      - name: OpenAPI lint
+        run: npm run lint --prefix contracts
+      - name: Generated models are up to date
+        run: python contracts/generate.py --check
+      - name: Generated models round-trip every example
+        run: python contracts/check_generated.py --require-dart
+
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Compile the generated models in an empty Flutter project
+        run: |
+          flutter create --project-name contract_probe "$RUNNER_TEMP/probe"
+          cd "$RUNNER_TEMP/probe"
+          flutter pub add room_contracts --path "$GITHUB_WORKSPACE/contracts/generated/dart"
+          cat > test/contract_test.dart <<'EOF'
+          import 'package:flutter_test/flutter_test.dart';
+          import 'package:room_contracts/room_contracts.dart';
+
+          void main() {
+            test('parses and serialises a lecture', () {
+              const body = '{"id":"lec_7f3k2m9q1x","title":"Distributed Systems, week 7","course_code":"CS301","lecturer":"Dr. Karimova","starts_at":"2026-10-13T09:00:00.000Z","ends_at":"2026-10-13T10:30:00.000Z","status":"scheduled","lighting_mode":"presentation","notes":null,"created_at":"2026-10-10T14:02:11.000Z","updated_at":"2026-10-10T14:02:11.000Z"}';
+              final lecture = lectureFromJson(body);
+              expect(lecture.id, 'lec_7f3k2m9q1x');
+              expect(lecture.status, LectureStatus.SCHEDULED);
+              expect(lectureToJson(lecture), contains('"starts_at":"2026-10-13T09:00:00.000Z"'));
+              expect(contractVersion, isNotEmpty);
+            });
+          }
+          EOF
+          flutter analyze
+          flutter test
