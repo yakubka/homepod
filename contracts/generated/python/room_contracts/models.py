@@ -1,4 +1,4 @@
-# Generated from contracts/schemas, contract 1.0.1. Do not edit.
+# Generated from contracts/schemas, contract 1.0.2. Do not edit.
 # Regenerate with: python contracts/generate.py
 
 from __future__ import annotations
@@ -163,7 +163,7 @@ class ComponentStatus(Enum):
 
 class Component(Enum):
     """
-    Process on the Pi that publishes to the event bus. bridge owns the serial link to the ESP32, recorder writes history.
+    Process on the Pi that publishes to the event bus. bridge owns the serial link to the ESP32, recorder writes history, core is the bus, state store and model runtime itself.
     """
 
     api = "api"
@@ -172,6 +172,7 @@ class Component(Enum):
     vision = "vision"
     bridge = "bridge"
     recorder = "recorder"
+    core = "core"
 
 
 class BusTopic(Enum):
@@ -193,6 +194,7 @@ class BusTopic(Enum):
     schedule_lecture = "schedule.lecture"
     settings_changed = "settings.changed"
     system_heartbeat = "system.heartbeat"
+    system_degraded = "system.degraded"
     system_state = "system.state"
 
 
@@ -363,6 +365,61 @@ class CommandStatus(Enum):
     applied = "applied"
     rejected = "rejected"
     timeout = "timeout"
+
+
+class DegradedReason(Enum):
+    """
+    memory_ceiling means process resident memory passed models.memory_ceiling_mb, slow_inference means one inference took longer than guard.p95_factor times the declared p95 of its model.
+    """
+
+    memory_ceiling = "memory_ceiling"
+    slow_inference = "slow_inference"
+
+
+class DegradedUnit(Enum):
+    """
+    mb is mebibytes of resident memory, ms is milliseconds.
+    """
+
+    mb = "mb"
+    ms = "ms"
+
+
+class DegradedAction(Enum):
+    """
+    evicted means idle on-demand models were unloaded, fallback means services are expected to switch to their fallback.
+    """
+
+    evicted = "evicted"
+    fallback = "fallback"
+
+
+class Degraded(BaseModel):
+    """
+    A runtime budget breach, published by the core runtime guard on system.degraded. Services react by switching to their fallback, for example vision lowering its frame rate or voice answering without the optional language model. The guard publishes at most one event per reason and model every guard.cooldown seconds.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+        populate_by_name=True,
+    )
+    ts: AwareDatetime = Field(..., description="Detection time, ISO 8601 UTC.")
+    reason: DegradedReason = Field(..., description="Which budget was breached.")
+    model_id: constr(pattern=r"^[a-z][a-z0-9_]{1,31}$") | None = Field(
+        ...,
+        description="Model id from services/core/models.py for slow_inference, null for memory_ceiling.",
+    )
+    measured: confloat(ge=0.0) = Field(
+        ..., description="Measured value, in unit, one decimal place."
+    )
+    limit: confloat(ge=0.0) = Field(
+        ..., description="The limit that was crossed, in unit, one decimal place."
+    )
+    unit: DegradedUnit = Field(..., description="Unit of measured and limit.")
+    action: DegradedAction = Field(..., description="What core already did.")
+    evicted: list[constr(pattern=r"^[a-z][a-z0-9_]{1,31}$")] = Field(
+        ..., description="Model ids evicted to recover memory, empty when none."
+    )
 
 
 class AckStatus(Enum):

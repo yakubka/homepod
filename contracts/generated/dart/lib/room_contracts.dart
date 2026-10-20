@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// Generated from contracts/schemas, contract 1.0.1.
+// Generated from contracts/schemas, contract 1.0.2.
 // Regenerate with: python contracts/generate.py
 //
 // ignore_for_file: constant_identifier_names, prefer_null_aware_operators
@@ -44,7 +44,7 @@
 
 import 'dart:convert';
 
-const String contractVersion = "1.0.1";
+const String contractVersion = "1.0.2";
 
 ErrorResponse errorResponseFromJson(String str) => ErrorResponse.fromJson(json.decode(str));
 
@@ -2724,6 +2724,7 @@ enum BusTopic {
     SENSOR_ENVIRONMENT,
     SENSOR_PRESENCE,
     SETTINGS_CHANGED,
+    SYSTEM_DEGRADED,
     SYSTEM_HEARTBEAT,
     SYSTEM_STATE,
     VOICE_INTENT,
@@ -2742,6 +2743,7 @@ final busTopicValues = EnumValues({
     "sensor.environment": BusTopic.SENSOR_ENVIRONMENT,
     "sensor.presence": BusTopic.SENSOR_PRESENCE,
     "settings.changed": BusTopic.SETTINGS_CHANGED,
+    "system.degraded": BusTopic.SYSTEM_DEGRADED,
     "system.heartbeat": BusTopic.SYSTEM_HEARTBEAT,
     "system.state": BusTopic.SYSTEM_STATE,
     "voice.intent": BusTopic.VOICE_INTENT,
@@ -4184,10 +4186,11 @@ class Heartbeat {
 ///Publishing component.
 ///
 ///Process on the Pi that publishes to the event bus. bridge owns the serial link to the
-///ESP32, recorder writes history.
+///ESP32, recorder writes history, core is the bus, state store and model runtime itself.
 enum Component {
     API,
     BRIDGE,
+    CORE,
     ENGINE,
     RECORDER,
     VISION,
@@ -4197,6 +4200,7 @@ enum Component {
 final componentValues = EnumValues({
     "api": Component.API,
     "bridge": Component.BRIDGE,
+    "core": Component.CORE,
     "engine": Component.ENGINE,
     "recorder": Component.RECORDER,
     "vision": Component.VISION,

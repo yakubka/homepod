@@ -154,9 +154,9 @@
     },
     "Component": {
       "title": "Component",
-      "description": "Process on the Pi that publishes to the event bus. bridge owns the serial link to the ESP32, recorder writes history.",
+      "description": "Process on the Pi that publishes to the event bus. bridge owns the serial link to the ESP32, recorder writes history, core is the bus, state store and model runtime itself.",
       "type": "string",
-      "enum": ["api", "engine", "voice", "vision", "bridge", "recorder"]
+      "enum": ["api", "engine", "voice", "vision", "bridge", "recorder", "core"]
     },
     "BusTopic": {
       "title": "BusTopic",
@@ -177,6 +177,7 @@
         "schedule.lecture",
         "settings.changed",
         "system.heartbeat",
+        "system.degraded",
         "system.state"
       ]
     },

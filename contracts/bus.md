@@ -47,6 +47,7 @@ Every JSON block below is validated by `validate.py`.
 | `schedule.lecture` | LectureEvent | api | engine | per lecture change, start and end | no |
 | `settings.changed` | Settings | api | engine, voice | at API start and per PATCH /settings | yes |
 | `system.heartbeat` | Heartbeat | every component | api | every 5 s per component | yes |
+| `system.degraded` | Degraded | core | every service, api | on a budget breach, at most once per reason and model per 30 s | no |
 | `system.state` | SystemState | engine | api | on change at most 2 Hz, and every 5 s | yes |
 
 `api` subscribes to every topic it relays over `GET /events`. Only the publisher listed may publish a
@@ -235,6 +236,19 @@ Every component, every 5 s. `payload.component` equals the envelope `source`. Th
 ```json
 {"id":"evt_6c8v0b2n4m","topic":"system.heartbeat","ts":"2026-10-13T08:55:04.000Z","source":"vision","contract_version":"1.0.0","correlation_id":null,
  "payload":{"component":"vision","status":"degraded","version":"0.2.0","uptime_s":7200,"detail":"Running at 0.5 fps, target is 1 fps."}}
+```
+
+### `system.degraded`
+
+The runtime guard in core found a budget breach: process memory above `models.memory_ceiling_mb`, or
+one inference slower than three times the declared p95 of its model, see `docs/budget.md`. For a
+memory breach core first evicts idle on-demand models. Every service decides its own fallback, the
+event never stops anything by itself.
+
+<!-- schema: BusEnvelope -->
+```json
+{"id":"evt_5g7h9j1k3l","topic":"system.degraded","ts":"2026-10-20T09:14:02.312Z","source":"core","contract_version":"1.0.2","correlation_id":null,
+ "payload":{"ts":"2026-10-20T09:14:02.310Z","reason":"slow_inference","model_id":"stt","measured":4870.2,"limit":4500.0,"unit":"ms","action":"fallback","evicted":[]}}
 ```
 
 ### `system.state`

@@ -21,6 +21,12 @@
    safe after the freeze.
 6. MAJOR is reserved for the next contract after this sprint.
 
+## 1.0.2, 2026-10-20
+
+- New topic `system.degraded` with payload `Degraded`, published by the V-03 runtime guard.
+- New component `core` for the bus, state store and model runtime, the only publisher of
+  `system.degraded`. Both are additions, nothing existing changes.
+
 ## 1.0.1, 2026-10-20
 
 - `bus.md`: the bus runs in process, `services/core/bus.py`, as V-02 specifies. The MQTT

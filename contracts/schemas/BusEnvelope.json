@@ -76,6 +76,10 @@
       "then": { "properties": { "source": { "const": "api" }, "payload": { "$ref": "Settings.json" } } }
     },
     {
+      "if": { "properties": { "topic": { "const": "system.degraded" } } },
+      "then": { "properties": { "source": { "const": "core" }, "payload": { "$ref": "Degraded.json" } } }
+    },
+    {
       "if": { "properties": { "topic": { "const": "system.state" } } },
       "then": { "properties": { "source": { "const": "engine" }, "payload": { "$ref": "SystemState.json" } } }
     }
