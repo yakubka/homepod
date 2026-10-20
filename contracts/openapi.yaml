@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Room Controller API
-  version: 1.0.2
+  version: 1.0.3
   summary: HTTP interface between the mobile app and the room Pi.
   description: |
     Contract v1 for the app, the API, the engine, the voice stack, the vision stack and the ESP32.
@@ -100,14 +100,14 @@ paths:
               examples:
                 healthy:
                   summary: All components up, vision slow
-                  value: {"ok": true, "data": {"status": "ok", "ts": "2026-10-13T08:55:05.000Z", "service_version": "0.3.1", "contract_version": "1.0.0", "uptime_s": 86400, "components": [
-                    {"name": "api", "status": "ok", "last_seen_at": "2026-10-13T08:55:05.000Z", "detail": null},
-                    {"name": "bus", "status": "ok", "last_seen_at": "2026-10-13T08:55:05.000Z", "detail": null},
-                    {"name": "engine", "status": "ok", "last_seen_at": "2026-10-13T08:55:04.100Z", "detail": null},
-                    {"name": "bridge", "status": "ok", "last_seen_at": "2026-10-13T08:55:04.900Z", "detail": null},
-                    {"name": "esp32", "status": "ok", "last_seen_at": "2026-10-13T08:55:03.500Z", "detail": null},
-                    {"name": "vision", "status": "degraded", "last_seen_at": "2026-10-13T08:55:04.000Z", "detail": "Running at 0.5 fps, target is 1 fps."},
-                    {"name": "voice", "status": "ok", "last_seen_at": "2026-10-13T08:55:02.000Z", "detail": null}]}}
+                  value: {"ok": true, "data": {"status": "ok", "ts": "2026-10-13T08:55:05.000Z", "service_version": "0.3.1", "contract_version": "1.0.0", "uptime_s": 86400, "degradations": [], "components": [
+                    {"name": "api", "status": "ok", "last_seen_at": "2026-10-13T08:55:05.000Z", "detail": null, "uptime_s": 86400, "restarts": 0},
+                    {"name": "bus", "status": "ok", "last_seen_at": "2026-10-13T08:55:05.000Z", "detail": null, "uptime_s": 86400, "restarts": 0},
+                    {"name": "engine", "status": "ok", "last_seen_at": "2026-10-13T08:55:04.100Z", "detail": null, "uptime_s": 86400, "restarts": 0},
+                    {"name": "bridge", "status": "ok", "last_seen_at": "2026-10-13T08:55:04.900Z", "detail": null, "uptime_s": 86400, "restarts": 0},
+                    {"name": "esp32", "status": "ok", "last_seen_at": "2026-10-13T08:55:03.500Z", "detail": null, "uptime_s": 86400, "restarts": 0},
+                    {"name": "vision", "status": "degraded", "last_seen_at": "2026-10-13T08:55:04.000Z", "detail": "Running at 0.5 fps, target is 1 fps.", "uptime_s": 86400, "restarts": 0},
+                    {"name": "voice", "status": "ok", "last_seen_at": "2026-10-13T08:55:02.000Z", "detail": null, "uptime_s": 86400, "restarts": 0}]}}
         "503":
           description: A critical component is down.
           content:

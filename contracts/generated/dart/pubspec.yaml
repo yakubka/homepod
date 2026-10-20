@@ -1,6 +1,6 @@
 name: room_contracts
 description: Generated models for the room controller interface contract.
-version: 1.0.2
+version: 1.0.3
 publish_to: none
 
 environment:

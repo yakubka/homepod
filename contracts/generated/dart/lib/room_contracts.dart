@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// Generated from contracts/schemas, contract 1.0.2.
+// Generated from contracts/schemas, contract 1.0.3.
 // Regenerate with: python contracts/generate.py
 //
 // ignore_for_file: constant_identifier_names, prefer_null_aware_operators
@@ -44,7 +44,7 @@
 
 import 'dart:convert';
 
-const String contractVersion = "1.0.2";
+const String contractVersion = "1.0.3";
 
 ErrorResponse errorResponseFromJson(String str) => ErrorResponse.fromJson(json.decode(str));
 
@@ -300,7 +300,8 @@ final errorCodeValues = EnumValues({
 
 
 ///Liveness and readiness of the Pi services, returned by GET /health. status is the worst
-///status of the critical components api, bus, engine and bridge.
+///status of the critical components api, bus, engine and bridge. degradations lists every
+///degraded mode in force, see docs/degraded.md.
 class HealthStatus {
     
     ///One entry per component, at most one per name.
@@ -308,6 +309,9 @@ class HealthStatus {
     
     ///Contract version the API was built against.
     final String contractVersion;
+    
+    ///Degraded modes in force, empty when the room runs normally, at most one entry per flag.
+    final List<Degradation> degradations;
     
     ///API service version.
     final String serviceVersion;
@@ -324,6 +328,7 @@ class HealthStatus {
     HealthStatus({
         required this.components,
         required this.contractVersion,
+        required this.degradations,
         required this.serviceVersion,
         required this.status,
         required this.ts,
@@ -333,6 +338,7 @@ class HealthStatus {
     HealthStatus copyWith({
         List<ComponentHealth>? components,
         String? contractVersion,
+        List<Degradation>? degradations,
         String? serviceVersion,
         ComponentStatus? status,
         DateTime? ts,
@@ -341,6 +347,7 @@ class HealthStatus {
         HealthStatus(
             components: components ?? this.components,
             contractVersion: contractVersion ?? this.contractVersion,
+            degradations: degradations ?? this.degradations,
             serviceVersion: serviceVersion ?? this.serviceVersion,
             status: status ?? this.status,
             ts: ts ?? this.ts,
@@ -350,6 +357,7 @@ class HealthStatus {
     factory HealthStatus.fromJson(Map<String, dynamic> json) => HealthStatus(
         components: List<ComponentHealth>.from(json["components"].map((x) => ComponentHealth.fromJson(x))),
         contractVersion: json["contract_version"],
+        degradations: List<Degradation>.from(json["degradations"].map((x) => Degradation.fromJson(x))),
         serviceVersion: json["service_version"],
         status: componentStatusValues.map[json["status"]]!,
         ts: DateTime.parse(json["ts"]),
@@ -359,6 +367,7 @@ class HealthStatus {
     Map<String, dynamic> toJson() => <String, dynamic>{
         "components": List<dynamic>.from(components.map((x) => x.toJson())),
         "contract_version": contractVersion,
+        "degradations": List<dynamic>.from(degradations.map((x) => x.toJson())),
         "service_version": serviceVersion,
         "status": componentStatusValues.reverse[status],
         "ts": ts.toIso8601String(),
@@ -379,41 +388,57 @@ class ComponentHealth {
     ///Component.
     final HealthComponent name;
     
+    ///Times the supervisor restarted the component since core started.
+    final int restarts;
+    
     ///Component status.
     final ComponentStatus status;
+    
+    ///Seconds since the component last started, null when it is not running.
+    final int? uptimeS;
 
     ComponentHealth({
         required this.detail,
         required this.lastSeenAt,
         required this.name,
+        required this.restarts,
         required this.status,
+        required this.uptimeS,
     });
 
     ComponentHealth copyWith({
         String? detail,
         DateTime? lastSeenAt,
         HealthComponent? name,
+        int? restarts,
         ComponentStatus? status,
+        int? uptimeS,
     }) => 
         ComponentHealth(
             detail: detail ?? this.detail,
             lastSeenAt: lastSeenAt ?? this.lastSeenAt,
             name: name ?? this.name,
+            restarts: restarts ?? this.restarts,
             status: status ?? this.status,
+            uptimeS: uptimeS ?? this.uptimeS,
         );
 
     factory ComponentHealth.fromJson(Map<String, dynamic> json) => ComponentHealth(
         detail: json["detail"],
         lastSeenAt: json["last_seen_at"] == null ? null : DateTime.parse(json["last_seen_at"]),
         name: healthComponentValues.map[json["name"]]!,
+        restarts: json["restarts"],
         status: componentStatusValues.map[json["status"]]!,
+        uptimeS: json["uptime_s"],
     );
 
     Map<String, dynamic> toJson() => <String, dynamic>{
         "detail": detail,
         "last_seen_at": lastSeenAt?.toIso8601String(),
         "name": healthComponentValues.reverse[name],
+        "restarts": restarts,
         "status": componentStatusValues.reverse[status],
+        "uptime_s": uptimeS,
     }..removeWhere((_, value) => value == null);
 }
 
@@ -477,6 +502,77 @@ final componentStatusValues = EnumValues({
     "degraded": ComponentStatus.DEGRADED,
     "down": ComponentStatus.DOWN,
     "ok": ComponentStatus.OK
+});
+
+
+///One degraded mode in force.
+class Degradation {
+    
+    ///Short explanation, null when the flag says it all.
+    final String? detail;
+    
+    ///Which degraded mode.
+    final DegradationFlag flag;
+    
+    ///When it began, ISO 8601 UTC.
+    final DateTime since;
+
+    Degradation({
+        required this.detail,
+        required this.flag,
+        required this.since,
+    });
+
+    Degradation copyWith({
+        String? detail,
+        DegradationFlag? flag,
+        DateTime? since,
+    }) => 
+        Degradation(
+            detail: detail ?? this.detail,
+            flag: flag ?? this.flag,
+            since: since ?? this.since,
+        );
+
+    factory Degradation.fromJson(Map<String, dynamic> json) => Degradation(
+        detail: json["detail"],
+        flag: degradationFlagValues.map[json["flag"]]!,
+        since: DateTime.parse(json["since"]),
+    );
+
+    Map<String, dynamic> toJson() => <String, dynamic>{
+        "detail": detail,
+        "flag": degradationFlagValues.reverse[flag],
+        "since": since.toIso8601String(),
+    }..removeWhere((_, value) => value == null);
+}
+
+
+///Which degraded mode.
+///
+///device_link_lost means the ESP32 link is down, sensor values are stale and actuator calls
+///fail with device_unavailable. vision_unavailable means camera or detector are down and
+///occupancy comes from the presence sensor with null counts. stt_unavailable means speech
+///to text is down and voice answers with the fallback sentence. internet_unavailable means
+///general questions fail with a spoken sentence while local intents work. over_budget means
+///the scheduler is shedding vision, then general questions. service_failed means the
+///supervisor gave up restarting a service, named in detail.
+enum DegradationFlag {
+    DEVICE_LINK_LOST,
+    INTERNET_UNAVAILABLE,
+    OVER_BUDGET,
+    SERVICE_FAILED,
+    STT_UNAVAILABLE,
+    VISION_UNAVAILABLE
+}
+
+final degradationFlagValues = EnumValues({
+    "device_link_lost": DegradationFlag.DEVICE_LINK_LOST,
+    "internet_unavailable": DegradationFlag.INTERNET_UNAVAILABLE,
+    "over_budget": DegradationFlag.OVER_BUDGET,
+    "service_failed": DegradationFlag.SERVICE_FAILED,
+    "stt_unavailable": DegradationFlag.STT_UNAVAILABLE,
+    "vision_unavailable": DegradationFlag.VISION_UNAVAILABLE
 });
 
 
@@ -1224,7 +1320,9 @@ class OccupancySnapshot {
 
 ///Where the estimate comes from.
 ///
-///vision is the camera people counter, presence is the PIR fallback.
+///vision is the camera people counter. presence is the presence sensor fallback, the ESP32
+///PIR or the radar on the Pi, and always comes with null counts, a count is never estimated
+///from presence.
 enum OccupancySource {
     PRESENCE,
     VISION

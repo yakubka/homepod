@@ -34,7 +34,7 @@
   "$defs": {
     "OccupancySource": {
       "title": "OccupancySource",
-      "description": "vision is the camera people counter, presence is the PIR fallback.",
+      "description": "vision is the camera people counter. presence is the presence sensor fallback, the ESP32 PIR or the radar on the Pi, and always comes with null counts, a count is never estimated from presence.",
       "type": "string",
       "enum": ["vision", "presence"]
     }

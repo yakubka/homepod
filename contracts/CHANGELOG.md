@@ -21,6 +21,13 @@
    safe after the freeze.
 6. MAJOR is reserved for the next contract after this sprint.
 
+## 1.0.3, 2026-10-20
+
+- `HealthStatus` gains `degradations`, the V-04 degraded modes in force, and every component gains
+  `uptime_s` and `restarts`. New response fields only.
+- `OccupancySource` description: `presence` covers the radar on the Pi as well as the ESP32 PIR. The
+  enum is unchanged, adding `radar` would break existing clients after the freeze.
+
 ## 1.0.2, 2026-10-20
 
 - New topic `system.degraded` with payload `Degraded`, published by the V-03 runtime guard.

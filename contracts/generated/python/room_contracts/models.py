@@ -1,4 +1,4 @@
-# Generated from contracts/schemas, contract 1.0.2. Do not edit.
+# Generated from contracts/schemas, contract 1.0.3. Do not edit.
 # Regenerate with: python contracts/generate.py
 
 from __future__ import annotations
@@ -943,11 +943,48 @@ class ComponentHealth(BaseModel):
     detail: constr(max_length=200) | None = Field(
         ..., description="Short explanation when not ok, otherwise null."
     )
+    uptime_s: conint(ge=0) | None = Field(
+        ...,
+        description="Seconds since the component last started, null when it is not running.",
+    )
+    restarts: conint(ge=0) = Field(
+        ...,
+        description="Times the supervisor restarted the component since core started.",
+    )
+
+
+class DegradationFlag(Enum):
+    """
+    device_link_lost means the ESP32 link is down, sensor values are stale and actuator calls fail with device_unavailable. vision_unavailable means camera or detector are down and occupancy comes from the presence sensor with null counts. stt_unavailable means speech to text is down and voice answers with the fallback sentence. internet_unavailable means general questions fail with a spoken sentence while local intents work. over_budget means the scheduler is shedding vision, then general questions. service_failed means the supervisor gave up restarting a service, named in detail.
+    """
+
+    device_link_lost = "device_link_lost"
+    vision_unavailable = "vision_unavailable"
+    stt_unavailable = "stt_unavailable"
+    internet_unavailable = "internet_unavailable"
+    over_budget = "over_budget"
+    service_failed = "service_failed"
+
+
+class Degradation(BaseModel):
+    """
+    One degraded mode in force.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+        populate_by_name=True,
+    )
+    flag: DegradationFlag = Field(..., description="Which degraded mode.")
+    since: AwareDatetime = Field(..., description="When it began, ISO 8601 UTC.")
+    detail: constr(max_length=200) | None = Field(
+        ..., description="Short explanation, null when the flag says it all."
+    )
 
 
 class HealthStatus(BaseModel):
     """
-    Liveness and readiness of the Pi services, returned by GET /health. status is the worst status of the critical components api, bus, engine and bridge.
+    Liveness and readiness of the Pi services, returned by GET /health. status is the worst status of the critical components api, bus, engine and bridge. degradations lists every degraded mode in force, see docs/degraded.md.
     """
 
     model_config = ConfigDict(
@@ -968,6 +1005,10 @@ class HealthStatus(BaseModel):
     uptime_s: conint(ge=0) = Field(..., description="Seconds since API start.")
     components: list[ComponentHealth] = Field(
         ..., description="One entry per component, at most one per name.", min_length=1
+    )
+    degradations: list[Degradation] = Field(
+        ...,
+        description="Degraded modes in force, empty when the room runs normally, at most one entry per flag.",
     )
 
 
@@ -1306,7 +1347,7 @@ class LightingState(BaseModel):
 
 class OccupancySource(Enum):
     """
-    vision is the camera people counter, presence is the PIR fallback.
+    vision is the camera people counter. presence is the presence sensor fallback, the ESP32 PIR or the radar on the Pi, and always comes with null counts, a count is never estimated from presence.
     """
 
     vision = "vision"
