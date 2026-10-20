@@ -46,6 +46,11 @@ services/core/logs.py         JSON line logging with a trace id per interaction
 services/core/models.py       model registry, lazy load with warmup, eviction, pinned threads
 services/core/scheduler.py    priority scheduler for heavy inference, voice before vision
 services/core/guard.py        memory and latency guard, publishes system.degraded
+services/core/supervisor.py   start order, health polling, restart with backoff, give up into degraded
+services/core/degradation.py  degraded modes in force, shown on /health
+tools/chaos.py                kills every service and link of a running room, report in eval/reports/chaos.md
+docs/degraded.md              what the room does when each part dies
+docs/runbook.md               what to do during the demo when something breaks
 eval/bench_models.py          model benchmark, report in eval/reports/models.md
 docs/budget.md                per model core and memory allowance every lane is accepted against
 services/recorder/            keeps bus history

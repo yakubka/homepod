@@ -17,13 +17,28 @@ classes see should_yield() and skip their next frame instead of competing:
         continue
 
 The yield is cooperative, nothing is interrupted mid inference.
+
+Over budget the scheduler sheds work in SHED_ORDER, vision first, then general
+questions. The announcement path is never in the list and is never shed.
 """
 
 import heapq
 import itertools
+import logging
 import threading
 from collections import Counter
 from contextlib import contextmanager
+
+log = logging.getLogger("scheduler")
+
+SHED_ORDER = ("vision", "general")
+PURPOSE = {2: "vision"}
+
+
+class Shed(RuntimeError):
+    def __init__(self, purpose):
+        self.purpose = purpose
+        super().__init__(f"{purpose} work is shed while the room is over budget")
 
 
 class Scheduler:
@@ -35,6 +50,16 @@ class Scheduler:
         self.counter = itertools.count()
         self.bursts = Counter()
         self.granted = Counter()
+        self.shed_level = 0
+
+    def shed(self, level):
+        level = max(0, min(level, len(SHED_ORDER)))
+        if level != self.shed_level:
+            log.warning("shedding changed", extra={"level": level, "shed": list(SHED_ORDER[:level])})
+        self.shed_level = level
+
+    def admits(self, purpose):
+        return purpose not in SHED_ORDER[:self.shed_level]
 
     @contextmanager
     def slot(self, priority):
@@ -53,7 +78,10 @@ class Scheduler:
                 self.free += 1
                 self.cond.notify_all()
 
-    def run(self, priority, fn, *args):
+    def run(self, priority, fn, *args, purpose=None):
+        purpose = purpose or PURPOSE.get(int(priority))
+        if purpose and not self.admits(purpose):
+            raise Shed(purpose)
         with self.slot(priority):
             return fn(*args)
 

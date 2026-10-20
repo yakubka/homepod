@@ -12,7 +12,7 @@ per field taken from the state.stale.<field> settings:
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Dict, Generic, Optional, TypeVar
 
 import room_contracts as rc
@@ -65,6 +65,7 @@ class RoomSnapshot:
 
 
 FIELDS = ("environment", "presence", "occupancy", "device", "lecture", "settings", "system", "decision")
+LINKED = ("environment", "presence")
 
 
 class StateStore:
@@ -116,12 +117,22 @@ class StateStore:
 
     def get(self, name, cfg=None):
         cfg = cfg or self.settings()
-        return self._field(self.fields.get(name), cfg[f"state.stale.{name}"], self.clock())
+        field = self._field(self.fields.get(name), cfg[f"state.stale.{name}"], self.clock())
+        if name in LINKED and self._link_down():
+            field = replace(field, stale=True)
+        return field
+
+    def _link_down(self):
+        record = self.fields.get("device")
+        return record is not None and record[0].status.value != "ok"
 
     def snapshot(self):
         cfg = self.settings()
         now = self.clock()
         fields = {name: self._field(self.fields.get(name), cfg[f"state.stale.{name}"], now) for name in FIELDS}
+        if self._link_down():
+            for name in LINKED:
+                fields[name] = replace(fields[name], stale=True)
         beats = {
             name: self._field(record, cfg["state.stale.heartbeat"], now)
             for name, record in sorted(self.heartbeats.items())

@@ -30,6 +30,9 @@ class Context:
     mode: str
     models: object = None
     scheduler: object = None
+    degradations: object = None
+    faults: object = None
+    supervisor: object = None
 
 
 class Service:
@@ -78,6 +81,23 @@ class Service:
             return {"ok": False, "detail": "not started", "last_tick": self.last_tick}
         return {"ok": True, "detail": "running", "last_tick": self.last_tick}
 
+    def crash(self, reason="killed"):
+        """Stop every task as if the service had died. Used by chaos testing, the supervisor restarts it."""
+        self.failure = reason
+        for task in self.tasks:
+            task.cancel()
+
+    def degrade(self, flag, detail=None):
+        if self.ctx.degradations is not None:
+            self.ctx.degradations.set(flag, detail)
+
+    def recover(self, flag):
+        if self.ctx.degradations is not None:
+            self.ctx.degradations.clear(flag)
+
+    def fault(self, link):
+        return self.ctx.faults is not None and self.ctx.faults.active(link)
+
     def tick(self):
         self.last_tick = iso_utc()
 
@@ -104,7 +124,10 @@ class Service:
 
     async def _heartbeat(self):
         while True:
-            health = self.health()
+            try:
+                health = self.health()
+            except Exception as e:
+                health = {"ok": False, "detail": f"health() raised {e!r}"}
             self.publish(
                 "system.heartbeat",
                 {

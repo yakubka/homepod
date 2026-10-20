@@ -286,11 +286,11 @@ class Registry:
             self.loaded[model_id] = model
             return model
 
-    def infer(self, model_id, *args):
+    def infer(self, model_id, *args, purpose=None):
         model = self.get(model_id)
         if self.scheduler is None or model.spec.priority is Priority.REALTIME:
             return model(*args)
-        return self.scheduler.run(model.spec.priority, model, *args)
+        return self.scheduler.run(model.spec.priority, model, *args, purpose=purpose)
 
     def _load(self, spec):
         backend = self.backends[spec.backend]

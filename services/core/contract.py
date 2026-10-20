@@ -25,20 +25,28 @@ def version():
 
 
 @lru_cache(maxsize=1)
-def _validator():
-    registry = Registry().with_resources(
+def _registry():
+    return Registry().with_resources(
         (path.as_uri(), Resource.from_contents(json.loads(path.read_text(encoding="utf-8")), default_specification=DRAFT202012))
         for path in SCHEMAS.glob("*.json")
     )
+
+
+@lru_cache(maxsize=None)
+def _validator(name="BusEnvelope"):
     return Draft202012Validator(
-        {"$ref": (SCHEMAS / "BusEnvelope.json").as_uri()},
-        registry=registry,
+        {"$ref": (SCHEMAS / f"{name}.json").as_uri()},
+        registry=_registry(),
         format_checker=Draft202012Validator.FORMAT_CHECKER,
     )
 
 
-def envelope_errors(envelope):
+def schema_errors(name, instance):
     return [
         f"{'.'.join(str(p) for p in error.absolute_path) or '$'}: {error.message}"
-        for error in _validator().iter_errors(envelope)
+        for error in _validator(name).iter_errors(instance)
     ]
+
+
+def envelope_errors(envelope):
+    return schema_errors("BusEnvelope", envelope)

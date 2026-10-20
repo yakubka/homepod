@@ -25,6 +25,7 @@ if MODE not in MODES:
     raise ValueError(f"VESTA_MODE must be one of {', '.join(MODES)}, got {MODE!r}")
 REAL = MODE == "real"
 STRICT = os.environ.get("VESTA_STRICT", "0") == "1"
+CHAOS = os.environ.get("VESTA_CHAOS", "0") == "1"
 
 DEFAULTS = {
     "device_name": "VESTA-1",
@@ -85,6 +86,20 @@ DEFAULTS = {
     "guard.interval": 5.0,
     "guard.p95_factor": 3.0,
     "guard.cooldown": 30.0,
+    "supervisor.poll_interval": 1.0,
+    "supervisor.failure_limit": 3,
+    "supervisor.backoff_base": 1.0,
+    "supervisor.backoff_max": 30.0,
+    "supervisor.max_restarts": 5,
+    "api.host": "0.0.0.0",
+    "api.port": 8080,
+    "api.key": "vesta-dev-key",
+    "api.reply_timeout": 3.0,
+    "device.retry_interval": 1.0,
+    "vision.interval": 1.0,
+    "voice.stt_timeout": 5.0,
+    "internet.probe_host": "1.1.1.1",
+    "internet.probe_interval": 30.0,
 }
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
