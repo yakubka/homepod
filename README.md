@@ -35,8 +35,17 @@ Every decision it makes is recorded with the inputs that caused it, so the room 
 ## Layout
 
 ```
-main.py                       boots everything
-services/core/config.py       settings and the VESTA_MODE switch
+main.py                       boots the prototype drivers directly
+services/core/__main__.py     python -m services.core, starts the bus, the state store and every service
+services/core/bus.py          in-process event bus, topics from contracts/bus.md
+services/core/state.py        typed room snapshot with per field staleness
+services/core/service.py      start, stop and health, the interface every lane implements
+services/core/config.py       layered settings and the VESTA_MODE switch
+services/core/mode.py         picks the replay, sim or real implementation of a source
+services/core/logs.py         JSON line logging with a trace id per interaction
+services/recorder/            keeps bus history
+contracts/                    interface contract, schemas and generated models
+config/default.yaml           committed defaults, config/local.yaml overrides them per machine
 services/core/engine/         the decision engine, pure, no input and no output
 services/core/runtime.py      the tick, builds the room state and applies what the engine decides
 services/device/              drivers, the only place a device library may be imported
@@ -66,18 +75,20 @@ has passed. `docs/rules.md` has the whole table.
 ## Running
 
 ```bash
-VESTA_MODE=replay python3 main.py
+VESTA_MODE=replay python3 -m services.core
 ```
 
-`replay` is the default and imports no device library, so the whole pipeline runs on a laptop.
-`VESTA_MODE=real` is the only value that touches the hardware.
+Prints one healthy line per service and runs until Ctrl C. `replay` is the default and imports no
+device library, so the whole stack runs on a laptop. `sim` adds randomised sensors, `VESTA_MODE=real`
+is the only value that touches the hardware. Add `VESTA_STRICT=1` while developing so a payload that
+breaks the contract fails the moment it is published. `docs/core.md` shows how a lane plugs in.
 
 ```bash
 pip install -r requirements-dev.txt
 PYTHONPATH=. python3 -m pytest tests/
 ```
 
-Ninety four tests, under a second. The eight room scenarios replay a two hour lecture in milliseconds and
+A hundred and twenty one tests. The eight room scenarios replay a two hour lecture in milliseconds and
 diff against their golden outcomes, so a changed threshold shows up as a named scenario failing.
 
 ## API
