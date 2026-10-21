@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import filecmp
 import json
 import os
 import re
@@ -304,16 +303,26 @@ def run(command: list[str]) -> None:
         raise SystemExit(f"command failed: {Path(command[0]).name}")
 
 
+IGNORED = ("__pycache__", ".dart_tool", "pubspec.lock", ".egg-info")
+
+
+def _files(root: Path) -> dict:
+    """Relative path to content, line endings normalised, build and install leftovers skipped.
+
+    A Windows checkout turns LF into CRLF and pip install -e leaves an egg-info
+    folder behind, neither makes the generated models stale.
+    """
+    files = {}
+    for path in root.rglob("*"):
+        relative = path.relative_to(root)
+        if path.is_file() and not any(part.endswith(IGNORED) for part in relative.parts):
+            files[relative.as_posix()] = path.read_bytes().replace(b"\r\n", b"\n")
+    return files
+
+
 def differences(left: Path, right: Path) -> list[str]:
-    found: list[str] = []
-
-    def walk(cmp: filecmp.dircmp, prefix: str) -> None:
-        found.extend(f"{prefix}{name}" for name in cmp.left_only + cmp.right_only + cmp.diff_files + cmp.funny_files)
-        for name, sub in cmp.subdirs.items():
-            walk(sub, f"{prefix}{name}/")
-
-    walk(filecmp.dircmp(left, right, ignore=["__pycache__", ".dart_tool", "pubspec.lock"]), "")
-    return found
+    fresh, committed = _files(left), _files(right)
+    return sorted(name for name in fresh.keys() | committed.keys() if fresh.get(name) != committed.get(name))
 
 
 def main() -> int:
