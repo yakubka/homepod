@@ -1,0 +1,2 @@
+contracts/generated/** text eol=lf
+eval/reports/*.md text eol=lf
