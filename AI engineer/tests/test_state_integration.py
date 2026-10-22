@@ -618,6 +618,11 @@ def test_every_runtime_path_to_speech_goes_through_the_output_arbiter():
         ("SherpaOnnxTtsEngine", "scripts/vesta_runtime_demo.py"),      # the development demo's optional real VOICE (synthesis only; its playback is fake)
         ("SherpaOnnxTtsEngine", "scripts/vesta_live_voice.py"),        # midterm live runner (approved): the real voice, handed to the runtime
         ("SoundDevicePlaybackEngine", "scripts/vesta_live_voice.py"),  # midterm live runner (approved): the real speaker, handed to the runtime
+        # team backend demo (reviewed addition, 2026-10-22): its real voice is handed to the bridge's runtime, so replies go through the arbiter;
+        # its one direct synthesize() makes the SYNTHETIC INPUT sentence for the STT step and is never played
+        ("SherpaOnnxTtsEngine", "scripts/vesta_ai_backend_demo.py"),
+        ("synthesize", "scripts/vesta_ai_backend_demo.py"),
+        ("play", "scripts/vesta_ai_backend_demo.py"),                  # its WAV-file playback (no speaker) delegates to the fake DemoPlayback
     }
 
 
@@ -630,7 +635,8 @@ def test_the_one_composition_root_is_the_only_place_that_builds_an_arbiter_and_n
     # midterm readiness: the approved live runner is the ONE place a real playback engine is built; it hands it to the runtime's arbiter
     assert {s for s in sites if s[0] == "SoundDevicePlaybackEngine"} == {("SoundDevicePlaybackEngine", "scripts/vesta_live_voice.py")}
     assert {s for s in sites if s[0] == "SherpaOnnxTtsEngine"} == {("SherpaOnnxTtsEngine", "scripts/vesta_runtime_demo.py"),
-                                                                  ("SherpaOnnxTtsEngine", "scripts/vesta_live_voice.py")}
+                                                                  ("SherpaOnnxTtsEngine", "scripts/vesta_live_voice.py"),
+                                                                  ("SherpaOnnxTtsEngine", "scripts/vesta_ai_backend_demo.py")}   # 2026-10-22, see above
 
 
 def test_only_the_arbiter_imports_the_controller_in_runtime_code():

@@ -13,7 +13,7 @@ from services.device.hardware import Hardware
 from services.device.led_ring import Ring
 from services.device.light_sensor import LightSensor
 from services.device.lights import Lights
-from services.vision.detector import Detector
+from services.vision.detector import engine_occupancy, make_detector
 from services.vision.occupancy import OccupancyLoop
 from services.voice.commands import Commands
 
@@ -43,13 +43,18 @@ def main():
     lux.poll(cfg["lux_poll_interval"])
 
     camera = Camera(width=cfg["camera_width"], height=cfg["camera_height"], fps=cfg["camera_fps"])
-    detector = Detector(width=cfg["camera_width"])
-    occupancy = OccupancyLoop(camera, detector, cfg["detection_interval"])
+    detector = make_detector(cfg)
+    occupancy = engine_occupancy(cfg, OccupancyLoop(camera, detector, cfg["detection_interval"]))
     lights = Lights()
 
     runtime = Runtime(lights, occupancy, lux, hw)
     commands = Commands(hw, runtime, config, display, ring, lux)
-    api = server.start(commands, hw, runtime, config, cfg["api_port"], lux)
+    ai = None
+    if cfg.get("ai.enabled", False):
+        from services.voice.ai import start_ai
+
+        ai = start_ai(commands, hw, runtime, lux)
+    api = server.start(commands, hw, runtime, config, cfg["api_port"], lux, ai)
 
     occupancy.start()
     runtime.start()
@@ -57,6 +62,8 @@ def main():
 
     def shutdown(sig, frame):
         log.info("shutting down")
+        if ai:
+            ai.stop()
         runtime.stop()
         occupancy.stop()
         lights.cleanup()

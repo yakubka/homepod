@@ -15,6 +15,12 @@ DEFAULTS = {
     "camera_height": 480,
     "camera_fps": 10,
     "detection_interval": 1.0,
+    "vision.detector": "mobilenet",
+    "vision.yolox_lighting": False,
+    "ai.enabled": False,
+    "ai.voice_input": "text",
+    "api.host": "127.0.0.1",
+    "api.cors_origins": [],
     "occupancy.window": 10.0,
     "occupancy.min_confidence": 0.4,
     "light.hold": 30.0,
@@ -40,6 +46,9 @@ DEFAULTS = {
     "announce.confirm": 60.0,
 }
 
+# safety and exposure settings: never changeable over the API
+LOCKED = {"ai.enabled", "ai.voice_input", "vision.detector", "vision.yolox_lighting", "api.host", "api.cors_origins"}
+
 PATH = os.path.join(os.path.dirname(__file__), "..", "..", "device_config.json")
 
 
@@ -58,6 +67,8 @@ def save(cfg):
 def update(key, value):
     if key not in DEFAULTS:
         return False, f"unknown key {key}"
+    if key in LOCKED:
+        return False, f"{key} can only be changed in device_config.json on the device"
     if not isinstance(value, type(DEFAULTS[key])) and not (
         isinstance(DEFAULTS[key], float) and isinstance(value, int)
     ):
