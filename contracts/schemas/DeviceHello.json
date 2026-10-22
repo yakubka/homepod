@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DeviceHello",
+  "description": "First uplink message after boot or after the serial port is opened, and the answer to a query for info. The bridge refuses to send commands to a device whose protocol_version major differs from the contract major.",
+  "type": "object",
+  "required": [
+    "type",
+    "seq",
+    "ts",
+    "device_id",
+    "fw_version",
+    "protocol_version",
+    "clock_synced",
+    "uptime_ms",
+    "reset_reason",
+    "report_interval_ms",
+    "capabilities"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": { "type": "string", "const": "hello", "description": "Message type." },
+    "seq": { "$ref": "DeviceCommand.json#/$defs/Seq", "description": "Uplink frame counter, 1 after boot." },
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Device time, ISO 8601 UTC, epoch based until the clock is synced." },
+    "device_id": { "$ref": "common.json#/$defs/DeviceId", "description": "Device identifier." },
+    "fw_version": { "$ref": "common.json#/$defs/SemVer", "description": "Firmware version." },
+    "protocol_version": { "$ref": "common.json#/$defs/SemVer", "description": "Contract version the firmware was built against, from contracts/VERSION." },
+    "clock_synced": { "type": "boolean", "description": "False until the device has received a downlink ts since boot." },
+    "uptime_ms": { "type": "integer", "minimum": 0, "maximum": 9007199254740991, "description": "Milliseconds since device boot." },
+    "reset_reason": { "$ref": "#/$defs/ResetReason", "description": "Cause of the last reset." },
+    "report_interval_ms": {
+      "type": "integer",
+      "minimum": 500,
+      "maximum": 60000,
+      "description": "Period of interval sensor reports, milliseconds, integer 500 to 60000, 2000 by default."
+    },
+    "capabilities": { "$ref": "#/$defs/DeviceCapabilities", "description": "Fitted hardware." }
+  },
+  "$defs": {
+    "ResetReason": {
+      "title": "ResetReason",
+      "description": "ESP32 reset cause.",
+      "type": "string",
+      "enum": ["power_on", "software", "watchdog", "brownout", "panic", "unknown"]
+    },
+    "SensorKind": {
+      "title": "SensorKind",
+      "description": "Environment sensor kind.",
+      "type": "string",
+      "enum": ["temperature", "humidity", "lux"]
+    },
+    "DeviceCapabilities": {
+      "title": "DeviceCapabilities",
+      "description": "Hardware fitted to this device.",
+      "type": "object",
+      "required": ["light_zones", "presence_zones", "fan", "ring", "sensors"],
+      "additionalProperties": false,
+      "properties": {
+        "light_zones": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 4,
+          "items": { "$ref": "common.json#/$defs/Zone" },
+          "description": "Zones with a dimmable light channel."
+        },
+        "presence_zones": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 4,
+          "items": { "$ref": "common.json#/$defs/Zone" },
+          "description": "Zones with a PIR sensor."
+        },
+        "fan": { "type": "boolean", "description": "Fan channel fitted." },
+        "ring": { "type": "boolean", "description": "LED ring fitted." },
+        "sensors": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/SensorKind" },
+          "description": "Environment sensors fitted."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "type": "hello",
+      "seq": 1,
+      "ts": "1970-01-01T00:00:01.204Z",
+      "device_id": "esp32-a1b2c3",
+      "fw_version": "0.4.0",
+      "protocol_version": "1.0.0",
+      "clock_synced": false,
+      "uptime_ms": 1204,
+      "reset_reason": "power_on",
+      "report_interval_ms": 2000,
+      "capabilities": {
+        "light_zones": ["left", "center", "right", "professor"],
+        "presence_zones": ["left", "center", "right", "professor"],
+        "fan": true,
+        "ring": true,
+        "sensors": ["temperature", "humidity", "lux"]
+      }
+    }
+  ]
+}

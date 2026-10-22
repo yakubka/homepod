@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HistorySeries",
+  "description": "Time series of one metric, bucketed by the recorder and returned by GET /history. Each point is the mean over its bucket, ts is the bucket start. A bucket without samples has value null. Points are in ascending ts order with no gaps.",
+  "type": "object",
+  "required": ["metric", "unit", "zone", "from", "to", "bucket_s", "points"],
+  "additionalProperties": false,
+  "properties": {
+    "metric": { "$ref": "#/$defs/HistoryMetric", "description": "Metric." },
+    "unit": { "$ref": "#/$defs/HistoryUnit", "description": "Unit of every value." },
+    "zone": {
+      "description": "Zone for occupancy, null for the whole room and for other metrics.",
+      "anyOf": [{ "$ref": "common.json#/$defs/Zone" }, { "type": "null" }]
+    },
+    "from": { "$ref": "common.json#/$defs/Timestamp", "description": "Inclusive start, ISO 8601 UTC, aligned to bucket_s." },
+    "to": { "$ref": "common.json#/$defs/Timestamp", "description": "Exclusive end, ISO 8601 UTC, aligned to bucket_s." },
+    "bucket_s": { "$ref": "#/$defs/HistoryBucket", "description": "Bucket width, seconds." },
+    "points": {
+      "type": "array",
+      "maxItems": 1440,
+      "items": { "$ref": "#/$defs/HistoryPoint" },
+      "description": "Data points, at most 1440."
+    }
+  },
+  "$defs": {
+    "HistoryMetric": {
+      "title": "HistoryMetric",
+      "description": "temperature_c in celsius, humidity_pct in percent, lux in lux, occupancy in people.",
+      "type": "string",
+      "enum": ["temperature_c", "humidity_pct", "lux", "occupancy"]
+    },
+    "HistoryUnit": {
+      "title": "HistoryUnit",
+      "description": "Unit of a history value.",
+      "type": "string",
+      "enum": ["celsius", "percent", "lux", "people"]
+    },
+    "HistoryBucket": {
+      "title": "HistoryBucket",
+      "description": "Allowed bucket widths in seconds.",
+      "type": "integer",
+      "enum": [60, 300, 900, 3600]
+    },
+    "HistoryPoint": {
+      "title": "HistoryPoint",
+      "description": "One bucket.",
+      "type": "object",
+      "required": ["ts", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Bucket start, ISO 8601 UTC." },
+        "value": {
+          "type": ["number", "null"],
+          "description": "Bucket mean in the series unit, rounded to one decimal place, null when the bucket is empty."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "metric": "temperature_c",
+      "unit": "celsius",
+      "zone": null,
+      "from": "2026-10-13T09:00:00.000Z",
+      "to": "2026-10-13T09:15:00.000Z",
+      "bucket_s": 300,
+      "points": [
+        { "ts": "2026-10-13T09:00:00.000Z", "value": 23.1 },
+        { "ts": "2026-10-13T09:05:00.000Z", "value": 23.6 },
+        { "ts": "2026-10-13T09:10:00.000Z", "value": null }
+      ]
+    }
+  ]
+}

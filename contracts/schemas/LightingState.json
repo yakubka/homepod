@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LightingState",
+  "description": "Lighting as known by the engine. brightness is the last value the engine commanded. confirmed is true once the ESP32 acknowledged that value. zones holds exactly one entry per zone in canonical order.",
+  "type": "object",
+  "required": ["mode", "zones", "ambient_lux", "updated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "mode": { "$ref": "common.json#/$defs/LightingMode", "description": "Active lighting mode." },
+    "zones": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/ZoneLight" },
+      "description": "Per-zone lighting, one entry per zone, order left, center, right, professor."
+    },
+    "ambient_lux": {
+      "description": "Latest ambient illuminance used by auto mode, lux, integer 0 to 100000, null when unknown.",
+      "anyOf": [{ "$ref": "common.json#/$defs/Lux" }, { "type": "null" }]
+    },
+    "updated_at": { "$ref": "common.json#/$defs/Timestamp", "description": "Last change of any field, ISO 8601 UTC." }
+  },
+  "$defs": {
+    "ZoneLight": {
+      "title": "ZoneLight",
+      "description": "Light of one zone.",
+      "type": "object",
+      "required": ["zone", "brightness", "confirmed", "updated_at"],
+      "additionalProperties": false,
+      "properties": {
+        "zone": { "$ref": "common.json#/$defs/Zone", "description": "Zone." },
+        "brightness": { "$ref": "common.json#/$defs/Brightness", "description": "Commanded brightness, percent 0 to 100." },
+        "confirmed": {
+          "type": "boolean",
+          "description": "True when the device acknowledged this brightness, false while pending or after an ack timeout."
+        },
+        "updated_at": { "$ref": "common.json#/$defs/Timestamp", "description": "Time brightness was last commanded, ISO 8601 UTC." }
+      }
+    }
+  },
+  "examples": [
+    {
+      "mode": "auto",
+      "zones": [
+        { "zone": "left", "brightness": 80, "confirmed": true, "updated_at": "2026-10-13T08:55:02.410Z" },
+        { "zone": "center", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z" },
+        { "zone": "right", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z" },
+        { "zone": "professor", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z" }
+      ],
+      "ambient_lux": 140,
+      "updated_at": "2026-10-13T08:55:02.410Z"
+    }
+  ]
+}

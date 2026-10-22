@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DeviceError",
+  "description": "Unsolicited uplink error. Used for faults that cannot be reported in an ack, such as a line that is not valid JSON or a sensor that stopped responding. A command that parsed but cannot be executed is answered with an ack with status rejected instead.",
+  "type": "object",
+  "required": ["type", "seq", "ts", "code", "message", "ref_seq", "cmd_id"],
+  "additionalProperties": false,
+  "properties": {
+    "type": { "type": "string", "const": "error", "description": "Message type." },
+    "seq": { "$ref": "DeviceCommand.json#/$defs/Seq", "description": "Uplink frame counter." },
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Device time, ISO 8601 UTC." },
+    "code": { "$ref": "#/$defs/DeviceErrorCode", "description": "Error code." },
+    "message": { "type": "string", "maxLength": 120, "description": "Short English description, at most 120 characters." },
+    "ref_seq": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "maximum": 4294967295,
+      "description": "Downlink seq the error refers to, null when unknown."
+    },
+    "cmd_id": {
+      "description": "Downlink cmd_id the error refers to, null when unknown.",
+      "anyOf": [{ "$ref": "common.json#/$defs/CmdId" }, { "type": "null" }]
+    }
+  },
+  "$defs": {
+    "DeviceErrorCode": {
+      "title": "DeviceErrorCode",
+      "description": "parse_error means the line is not valid JSON, line_too_long means it exceeded 512 bytes, sensor_fault and actuator_fault mean hardware stopped responding, queue_full means a line was dropped, internal is anything else.",
+      "type": "string",
+      "enum": ["parse_error", "line_too_long", "sensor_fault", "actuator_fault", "queue_full", "internal"]
+    }
+  },
+  "examples": [
+    {
+      "type": "error",
+      "seq": 845,
+      "ts": "2026-10-13T09:02:44.010Z",
+      "code": "sensor_fault",
+      "message": "SHT31 not responding on I2C",
+      "ref_seq": null,
+      "cmd_id": null
+    }
+  ]
+}

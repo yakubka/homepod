@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DeviceCommand",
+  "description": "Downlink message from the Pi to the ESP32, one JSON object per line, see protocol.md. The engine publishes it on device.command without seq. The bridge stamps seq and overwrites ts with the write time immediately before the line goes on the wire, where seq is mandatory. Every field is explicit on the wire, there are no device side defaults.",
+  "oneOf": [
+    { "$ref": "#/$defs/SetZoneLight" },
+    { "$ref": "#/$defs/SetRing" },
+    { "$ref": "#/$defs/SetFan" },
+    { "$ref": "#/$defs/Query" },
+    { "$ref": "#/$defs/Ping" }
+  ],
+  "$defs": {
+    "Seq": {
+      "title": "Seq",
+      "description": "Per-direction frame counter of the serial link. Starts at 1 when the link opens, increases by 1 for every frame sent in that direction, wraps from 4294967295 to 1.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4294967295
+    },
+    "DeviceCommandType": {
+      "title": "DeviceCommandType",
+      "description": "Downlink message type.",
+      "type": "string",
+      "enum": ["set_zone_light", "set_ring", "set_fan", "query", "ping"]
+    },
+    "QueryWhat": {
+      "title": "QueryWhat",
+      "description": "sensors asks for an immediate sensor_report, state asks for the actuator state in the ack, info asks for a new hello.",
+      "type": "string",
+      "enum": ["sensors", "state", "info"]
+    },
+    "SetZoneLight": {
+      "title": "SetZoneLight",
+      "description": "Fade one zone to a brightness.",
+      "type": "object",
+      "required": ["type", "ts", "cmd_id", "zone", "brightness", "fade_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "set_zone_light", "description": "Message type." },
+        "seq": { "$ref": "#/$defs/Seq", "description": "Frame counter, stamped by the bridge, mandatory on the wire." },
+        "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Send time, ISO 8601 UTC. The device sets its clock from it." },
+        "cmd_id": { "$ref": "common.json#/$defs/CmdId", "description": "Command id echoed by the ack." },
+        "zone": { "$ref": "common.json#/$defs/Zone", "description": "Zone." },
+        "brightness": { "$ref": "common.json#/$defs/Brightness", "description": "Target brightness, percent 0 to 100." },
+        "fade_ms": { "$ref": "common.json#/$defs/FadeMs", "description": "Fade duration, milliseconds 0 to 5000." }
+      }
+    },
+    "SetRing": {
+      "title": "SetRing",
+      "description": "Set the LED ring animation used as voice feedback.",
+      "type": "object",
+      "required": ["type", "ts", "cmd_id", "pattern", "color", "brightness"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "set_ring", "description": "Message type." },
+        "seq": { "$ref": "#/$defs/Seq", "description": "Frame counter, stamped by the bridge, mandatory on the wire." },
+        "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Send time, ISO 8601 UTC." },
+        "cmd_id": { "$ref": "common.json#/$defs/CmdId", "description": "Command id echoed by the ack." },
+        "pattern": { "$ref": "common.json#/$defs/RingPattern", "description": "Animation." },
+        "color": {
+          "type": ["string", "null"],
+          "pattern": "^#[0-9A-F]{6}$",
+          "description": "Colour as #RRGGBB uppercase hex, null for the pattern default colour."
+        },
+        "brightness": { "$ref": "common.json#/$defs/Brightness", "description": "Ring brightness, percent 0 to 100." }
+      }
+    },
+    "SetFan": {
+      "title": "SetFan",
+      "description": "Set the fan speed.",
+      "type": "object",
+      "required": ["type", "ts", "cmd_id", "speed"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "set_fan", "description": "Message type." },
+        "seq": { "$ref": "#/$defs/Seq", "description": "Frame counter, stamped by the bridge, mandatory on the wire." },
+        "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Send time, ISO 8601 UTC." },
+        "cmd_id": { "$ref": "common.json#/$defs/CmdId", "description": "Command id echoed by the ack." },
+        "speed": { "$ref": "common.json#/$defs/FanSpeed", "description": "Fan speed, percent 0 to 100." }
+      }
+    },
+    "Query": {
+      "title": "Query",
+      "description": "Ask the device for data. The ack always comes first, a requested sensor_report or hello follows it.",
+      "type": "object",
+      "required": ["type", "ts", "cmd_id", "what"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "query", "description": "Message type." },
+        "seq": { "$ref": "#/$defs/Seq", "description": "Frame counter, stamped by the bridge, mandatory on the wire." },
+        "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Send time, ISO 8601 UTC." },
+        "cmd_id": { "$ref": "common.json#/$defs/CmdId", "description": "Command id echoed by the ack." },
+        "what": { "$ref": "#/$defs/QueryWhat", "description": "What to report." }
+      }
+    },
+    "Ping": {
+      "title": "Ping",
+      "description": "Heartbeat and clock sync, sent by the bridge every 5 seconds while the link is idle.",
+      "type": "object",
+      "required": ["type", "ts", "cmd_id"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "ping", "description": "Message type." },
+        "seq": { "$ref": "#/$defs/Seq", "description": "Frame counter, stamped by the bridge, mandatory on the wire." },
+        "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Send time, ISO 8601 UTC. The device sets its clock from it." },
+        "cmd_id": { "$ref": "common.json#/$defs/CmdId", "description": "Command id echoed by the ack." }
+      }
+    }
+  },
+  "examples": [
+    { "type": "set_zone_light", "seq": 4410, "ts": "2026-10-13T08:55:02.230Z", "cmd_id": "c00a41f2e", "zone": "left", "brightness": 80, "fade_ms": 400 },
+    { "type": "set_ring", "seq": 4411, "ts": "2026-10-13T09:30:10.020Z", "cmd_id": "c00a41f2f", "pattern": "listening", "color": "#2D7FF9", "brightness": 60 },
+    { "type": "set_fan", "seq": 4412, "ts": "2026-10-13T09:31:00.000Z", "cmd_id": "c00a41f30", "speed": 60 },
+    { "type": "query", "seq": 4413, "ts": "2026-10-13T09:31:05.000Z", "cmd_id": "c00a41f31", "what": "state" },
+    { "type": "ping", "seq": 4414, "ts": "2026-10-13T09:31:10.000Z", "cmd_id": "c00a41f32" },
+    { "type": "set_zone_light", "ts": "2026-10-13T08:55:02.212Z", "cmd_id": "c00a41f2e", "zone": "left", "brightness": 80, "fade_ms": 400 }
+  ]
+}

@@ -9,3 +9,8 @@ device_config.json
 htmlcov/
 models/*.caffemodel
 venv/
+.dart_tool/
+contracts/generated/dart/pubspec.lock
+node_modules/
+Thumbs.db
+config/local.yaml

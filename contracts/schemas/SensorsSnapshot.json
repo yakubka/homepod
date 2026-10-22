@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SensorsSnapshot",
+  "description": "Latest raw sensor data and ESP32 link status, returned by GET /sensors.",
+  "type": "object",
+  "required": ["environment", "presence", "device"],
+  "additionalProperties": false,
+  "properties": {
+    "environment": {
+      "description": "Latest environment reading, null before the first report.",
+      "anyOf": [{ "$ref": "EnvironmentReading.json" }, { "type": "null" }]
+    },
+    "presence": {
+      "description": "Latest PIR state, null before the first report.",
+      "anyOf": [{ "$ref": "PresenceReading.json" }, { "type": "null" }]
+    },
+    "device": { "$ref": "DeviceLink.json", "description": "ESP32 link status." }
+  },
+  "examples": [
+    {
+      "environment": { "ts": "2026-10-13T08:55:01.512Z", "device_id": "esp32-a1b2c3", "temperature_c": 23.4, "humidity_pct": 41, "lux": 140 },
+      "presence": {
+        "ts": "2026-10-13T08:55:01.512Z",
+        "device_id": "esp32-a1b2c3",
+        "zones": [
+          { "zone": "left", "present": true },
+          { "zone": "center", "present": false },
+          { "zone": "right", "present": false },
+          { "zone": "professor", "present": false }
+        ]
+      },
+      "device": {
+        "device_id": "esp32-a1b2c3",
+        "status": "ok",
+        "reason": null,
+        "fw_version": "0.4.0",
+        "protocol_version": "1.0.0",
+        "uptime_ms": 3605112,
+        "last_seen_at": "2026-10-13T08:55:01.512Z",
+        "last_error": null
+      }
+    }
+  ]
+}

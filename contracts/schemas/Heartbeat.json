@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Heartbeat",
+  "description": "Liveness signal every Pi component publishes on system.heartbeat every 5 seconds. A component without a heartbeat for 15 seconds is reported down by GET /health. component must equal the envelope source.",
+  "type": "object",
+  "required": ["component", "status", "version", "uptime_s", "detail"],
+  "additionalProperties": false,
+  "properties": {
+    "component": { "$ref": "common.json#/$defs/Component", "description": "Publishing component." },
+    "status": { "$ref": "common.json#/$defs/ComponentStatus", "description": "Self-reported status." },
+    "version": { "$ref": "common.json#/$defs/SemVer", "description": "Component version." },
+    "uptime_s": { "type": "integer", "minimum": 0, "description": "Seconds since the component started." },
+    "detail": { "type": ["string", "null"], "maxLength": 200, "description": "Short explanation when not ok, otherwise null." }
+  },
+  "examples": [
+    { "component": "vision", "status": "degraded", "version": "0.2.0", "uptime_s": 7200, "detail": "Running at 0.5 fps, target is 1 fps." }
+  ]
+}

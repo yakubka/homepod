@@ -1,0 +1,22 @@
+extends:
+  - recommended
+
+rules:
+  # Internal service on the room network, no license is published.
+  info-license: off
+  # GET /health takes no input and no key, so it has no 4xx response. Every
+  # other operation declares 400 or 401, and validate.py requires an error
+  # example on every operation.
+  operation-4xx-response: off
+  # Schemas close their objects explicitly with additionalProperties: false.
+  # Without this option the checker also closes the subschemas inside if/then
+  # rules and rejects valid examples.
+  no-invalid-media-type-examples:
+    severity: error
+    allowAdditionalProperties: true
+  no-invalid-schema-examples:
+    severity: error
+    allowAdditionalProperties: true
+  no-invalid-parameter-examples:
+    severity: error
+    allowAdditionalProperties: true
