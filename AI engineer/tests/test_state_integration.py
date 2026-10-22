@@ -614,14 +614,23 @@ def test_every_runtime_path_to_speech_goes_through_the_output_arbiter():
         ("synthesize", "assistant/spoken_output.py"),                  # only the controller synthesizes
         ("play", "assistant/output_arbiter.py"),                       # the arbiter's guard is the only thing that reaches the real playback engine
         ("play", "assistant/spoken_output.py"),                        # the controller plays on ITS engine: in an arbiter-built controller that is the guard
+        ("OutputArbiter", "assistant/runtime.py"),                     # the ONE composition root builds the ONE arbiter (deliberate update, 2026-10-16)
+        ("SherpaOnnxTtsEngine", "scripts/vesta_runtime_demo.py"),      # the development demo's optional real VOICE (synthesis only; its playback is fake)
+        ("SherpaOnnxTtsEngine", "scripts/vesta_live_voice.py"),        # midterm live runner (approved): the real voice, handed to the runtime
+        ("SoundDevicePlaybackEngine", "scripts/vesta_live_voice.py"),  # midterm live runner (approved): the real speaker, handed to the runtime
     }
 
 
-def test_no_runtime_module_constructs_a_real_engine_or_a_second_arbiter_yet():
-    """There is no runtime orchestrator in this repository yet: the engines and the arbiter are built only by tests. The day one
-    exists it must be the single composition root (engines -> OutputArbiter) and this expectation is updated deliberately."""
+def test_the_one_composition_root_is_the_only_place_that_builds_an_arbiter_and_no_real_playback_engine_is_built_anywhere():
+    """assistant/runtime.py is the single composition root: it builds the ONE OutputArbiter. A real playback engine is constructed nowhere
+    in this repository yet (a live runner would be the next, separately approved place), and the only real TTS construction is the
+    development demo's optional --tts real. Any other site must be reviewed and added here on purpose."""
     sites = _call_sites()
-    assert not {s for s in sites if s[0] in {"SoundDevicePlaybackEngine", "SherpaOnnxTtsEngine", "OutputArbiter"}}
+    assert {s for s in sites if s[0] == "OutputArbiter"} == {("OutputArbiter", "assistant/runtime.py")}
+    # midterm readiness: the approved live runner is the ONE place a real playback engine is built; it hands it to the runtime's arbiter
+    assert {s for s in sites if s[0] == "SoundDevicePlaybackEngine"} == {("SoundDevicePlaybackEngine", "scripts/vesta_live_voice.py")}
+    assert {s for s in sites if s[0] == "SherpaOnnxTtsEngine"} == {("SherpaOnnxTtsEngine", "scripts/vesta_runtime_demo.py"),
+                                                                  ("SherpaOnnxTtsEngine", "scripts/vesta_live_voice.py")}
 
 
 def test_only_the_arbiter_imports_the_controller_in_runtime_code():

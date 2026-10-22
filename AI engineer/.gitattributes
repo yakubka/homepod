@@ -1,0 +1,9 @@
+# VESTA AI subsystem. Applies to THIS folder only (the team repository's "AI engineer/" folder); it changes no root setting.
+# These files have their exact bytes pinned by SHA-256 in tests/ and evaluation/week8_router_history.py, so Git must never
+# convert their line endings (core.autocrlf on Windows, LF checkouts on the Raspberry Pi). Checked by tests/test_handoff_docs.py.
+evaluation/week8_intent_manifest_v1.json -text
+evaluation/week8_intent_manifest_v2.json -text
+evaluation/week8_task1_router_frozen.py -text
+evaluation/week8_phrase_table_task1_snapshot.json -text
+evaluation/week8_phrase_table_task4_snapshot.json -text
+intents/router.py -text

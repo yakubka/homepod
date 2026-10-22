@@ -1,0 +1,36 @@
+{
+  "schema_version": "week8-intent-eval-manifest-v1",
+  "corpus_id": "TEMPLATE-NO-REAL-CORPUS",
+  "template": true,
+  "banner": "TEMPLATE - NO REAL STT OUTPUT INCLUDED - REAL-WORLD INTENT ACCURACY: NOT MEASURED. Copy this file OUTSIDE the repository, replace every <placeholder>, remove the \"template\" flag and the TEMPLATE- prefix of corpus_id, then run: python -m evaluation.week8_intent_eval validate --manifest <file>",
+  "notes": "Rules: every entry is a REAL_STT_REVIEWED transcript - the text the speech-to-text engine actually produced for a consented recording, checked by a person (reviewed_by_human must be true). Never type a transcript from memory or invent one. The text must be the command as recognised, with the wake phrase already removed (the output of speech/pipeline.py). consent_reference is a register id (CONSENT-<id> or APPROVAL-<id> with a digit), never a name; recording_ref is an opaque id of the Week 7 recording (never a file name or a person). split_or_purpose is DEV or HELDOUT; tune on DEV only. The expected_* fields are the gold labels written by a person who did NOT build the router, BEFORE the evaluation is run. A manifest with real entries must live OUTSIDE the repository, and so must its evidence. The evaluation stores ids and labels only, never the transcript.",
+  "entries": [
+    {
+      "id": "TEMPLATE-REAL-0001",
+      "text": "<the transcript exactly as produced by STT and confirmed by a person, e.g. turn on the lights>",
+      "source_type": "REAL_STT_REVIEWED",
+      "split_or_purpose": "DEV",
+      "real_stt": {
+        "consent_reference": "<CONSENT-<register id with a digit> - never a name>",
+        "reviewed_by_human": true,
+        "stt_engine_id": "<engine id recorded by the Week 7 evidence, e.g. faster-whisper>",
+        "recording_ref": "<opaque id of the recording in the Week 7 corpus>"
+      },
+      "expected_outcome": "<ROUTED | INVALID_COMMAND | UNSUPPORTED | AMBIGUOUS | INVALID_INPUT>",
+      "expected_category": "<one of the six official categories, or null for a rejection (INVALID_COMMAND: the recognised command category)>",
+      "expected_handling": "<NONE | ANSWERING_FOUNDATION | ANSWER_NOT_IMPLEMENTED | NO_BACKEND_APPROVED | EXECUTION_NOT_IMPLEMENTED>",
+      "expected_query_family": null,
+      "expected_reason_code": null,
+      "expected_action": null,
+      "expected_target": null,
+      "expected_value": null,
+      "expected_unit": null,
+      "answer_fixture": null,
+      "expected_answer_status": null,
+      "expected_answer_contains": [],
+      "expected_answer_excludes": [],
+      "tags": [],
+      "notes": "<optional annotation; no personal data>"
+    }
+  ]
+}
