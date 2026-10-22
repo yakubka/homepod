@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VoiceCommand",
+  "description": "Parsed user request handed from the voice stack to the engine on voice.intent. The intent set is closed for this sprint. Each intent fixes action and target.type as in the table in bus.md, enforced by the allOf rules below. Intents below Settings.voice.min_confidence are emitted as unknown.",
+  "type": "object",
+  "required": ["request_id", "intent", "action", "target", "params", "confidence", "raw_text", "source"],
+  "additionalProperties": false,
+  "properties": {
+    "request_id": { "$ref": "common.json#/$defs/RequestId", "description": "Correlation id, same as on voice.wake and voice.transcript." },
+    "intent": { "$ref": "#/$defs/VoiceIntent", "description": "Recognised intent." },
+    "action": { "$ref": "#/$defs/VoiceAction", "description": "Verb implied by the intent." },
+    "target": { "$ref": "#/$defs/VoiceTarget", "description": "What the intent acts on." },
+    "params": { "$ref": "#/$defs/VoiceParams", "description": "Intent parameters, an empty object when the intent has none." },
+    "confidence": { "$ref": "common.json#/$defs/Confidence", "description": "Intent confidence, 0.0 to 1.0." },
+    "raw_text": { "type": "string", "maxLength": 200, "description": "Transcript the intent was parsed from, at most 200 characters." },
+    "source": { "$ref": "#/$defs/VoiceSource", "description": "Where the text came from." }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "intent": { "enum": ["lights_on", "lights_off", "set_brightness"] } } },
+      "then": { "properties": { "action": { "const": "set" }, "target": { "properties": { "type": { "const": "lighting" } } } } }
+    },
+    {
+      "if": { "properties": { "intent": { "const": "set_brightness" } } },
+      "then": { "properties": { "params": { "$ref": "#/$defs/VoiceParams", "required": ["brightness"] } } }
+    },
+    {
+      "if": { "properties": { "intent": { "enum": ["query_temperature", "query_humidity"] } } },
+      "then": { "properties": { "action": { "const": "query" }, "target": { "properties": { "type": { "const": "climate" }, "zone": { "type": "null" } } } } }
+    },
+    {
+      "if": { "properties": { "intent": { "const": "query_occupancy" } } },
+      "then": { "properties": { "action": { "const": "query" }, "target": { "properties": { "type": { "const": "occupancy" } } } } }
+    },
+    {
+      "if": { "properties": { "intent": { "const": "query_lecture" } } },
+      "then": { "properties": { "action": { "const": "query" }, "target": { "properties": { "type": { "const": "lecture" }, "zone": { "type": "null" } } } } }
+    },
+    {
+      "if": { "properties": { "intent": { "const": "start_presentation" } } },
+      "then": { "properties": { "action": { "const": "start" }, "target": { "properties": { "type": { "const": "presentation" }, "zone": { "type": "null" } } } } }
+    },
+    {
+      "if": { "properties": { "intent": { "const": "stop_presentation" } } },
+      "then": { "properties": { "action": { "const": "stop" }, "target": { "properties": { "type": { "const": "presentation" }, "zone": { "type": "null" } } } } }
+    },
+    {
+      "if": { "properties": { "intent": { "const": "play_announcement" } } },
+      "then": {
+        "properties": {
+          "action": { "const": "play" },
+          "target": { "properties": { "type": { "const": "announcement" }, "zone": { "type": "null" } } },
+          "params": { "$ref": "#/$defs/VoiceParams", "required": ["announcement_id"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "intent": { "const": "unknown" } } },
+      "then": { "properties": { "action": { "const": "none" }, "target": { "properties": { "type": { "const": "none" }, "zone": { "type": "null" } } } } }
+    }
+  ],
+  "$defs": {
+    "VoiceIntent": {
+      "title": "VoiceIntent",
+      "description": "Intents supported in this sprint, nothing more.",
+      "type": "string",
+      "enum": [
+        "lights_on",
+        "lights_off",
+        "set_brightness",
+        "query_temperature",
+        "query_humidity",
+        "query_occupancy",
+        "query_lecture",
+        "start_presentation",
+        "stop_presentation",
+        "play_announcement",
+        "unknown"
+      ]
+    },
+    "VoiceAction": {
+      "title": "VoiceAction",
+      "description": "Verb of an intent.",
+      "type": "string",
+      "enum": ["set", "query", "start", "stop", "play", "none"]
+    },
+    "VoiceTargetType": {
+      "title": "VoiceTargetType",
+      "description": "Subsystem an intent acts on.",
+      "type": "string",
+      "enum": ["lighting", "climate", "occupancy", "lecture", "presentation", "announcement", "none"]
+    },
+    "VoiceTarget": {
+      "title": "VoiceTarget",
+      "description": "Target of an intent.",
+      "type": "object",
+      "required": ["type", "zone"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "$ref": "#/$defs/VoiceTargetType", "description": "Subsystem." },
+        "zone": {
+          "description": "Zone named in the utterance, null for the whole room.",
+          "anyOf": [{ "$ref": "common.json#/$defs/Zone" }, { "type": "null" }]
+        }
+      }
+    },
+    "VoiceParams": {
+      "title": "VoiceParams",
+      "description": "Intent parameters. brightness is required for set_brightness, announcement_id for play_announcement.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "brightness": { "$ref": "common.json#/$defs/Brightness", "description": "Requested brightness, percent 0 to 100." },
+        "announcement_id": { "$ref": "common.json#/$defs/AnnouncementId", "description": "Announcement matched from the utterance." }
+      }
+    },
+    "VoiceSource": {
+      "title": "VoiceSource",
+      "description": "microphone is the room microphone, app is text sent through POST /voice/ask.",
+      "type": "string",
+      "enum": ["microphone", "app"]
+    }
+  },
+  "examples": [
+    {
+      "request_id": "req_8d1f6g3h2j",
+      "intent": "set_brightness",
+      "action": "set",
+      "target": { "type": "lighting", "zone": "left" },
+      "params": { "brightness": 40 },
+      "confidence": 0.93,
+      "raw_text": "set the left lights to forty percent",
+      "source": "microphone"
+    },
+    {
+      "request_id": "req_5t2w9x1c7v",
+      "intent": "query_temperature",
+      "action": "query",
+      "target": { "type": "climate", "zone": null },
+      "params": {},
+      "confidence": 0.97,
+      "raw_text": "what is the temperature in here",
+      "source": "app"
+    },
+    {
+      "request_id": "req_2a9s8d7f6g",
+      "intent": "unknown",
+      "action": "none",
+      "target": { "type": "none", "zone": null },
+      "params": {},
+      "confidence": 0.31,
+      "raw_text": "open the window",
+      "source": "microphone"
+    }
+  ]
+}

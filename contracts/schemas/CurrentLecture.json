@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CurrentLecture",
+  "description": "The lecture in progress at a given instant and the next one after it. Returned by GET /lectures/current.",
+  "type": "object",
+  "required": ["at", "current", "next"],
+  "additionalProperties": false,
+  "properties": {
+    "at": { "$ref": "common.json#/$defs/Timestamp", "description": "Instant the answer refers to, ISO 8601 UTC." },
+    "current": {
+      "description": "Lecture with status in_progress at that instant, null when none.",
+      "anyOf": [{ "$ref": "Lecture.json" }, { "type": "null" }]
+    },
+    "next": {
+      "description": "First scheduled lecture starting after that instant, null when none in the next 7 days.",
+      "anyOf": [{ "$ref": "Lecture.json" }, { "type": "null" }]
+    }
+  },
+  "examples": [
+    {
+      "at": "2026-10-13T09:12:00.000Z",
+      "current": {
+        "id": "lec_7f3k2m9q1x",
+        "title": "Distributed Systems, week 7",
+        "course_code": "CS301",
+        "lecturer": "Dr. Karimova",
+        "starts_at": "2026-10-13T09:00:00.000Z",
+        "ends_at": "2026-10-13T10:30:00.000Z",
+        "status": "in_progress",
+        "lighting_mode": "presentation",
+        "notes": null,
+        "created_at": "2026-10-10T14:02:11.000Z",
+        "updated_at": "2026-10-10T14:02:11.000Z"
+      },
+      "next": null
+    }
+  ]
+}

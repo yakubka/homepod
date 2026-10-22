@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SensorReport",
+  "description": "Uplink sensor sample from the ESP32. Sent every report_interval_ms from the hello, immediately on any PIR change but at most 5 per second, and after a query for sensors. The bridge splits it into sensor.environment and sensor.presence.",
+  "type": "object",
+  "required": ["type", "seq", "ts", "uptime_ms", "trigger", "temperature_c", "humidity_pct", "lux", "presence"],
+  "additionalProperties": false,
+  "properties": {
+    "type": { "type": "string", "const": "sensor_report", "description": "Message type." },
+    "seq": { "$ref": "DeviceCommand.json#/$defs/Seq", "description": "Uplink frame counter." },
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Device time of the sample, ISO 8601 UTC, epoch based until the clock is synced." },
+    "uptime_ms": { "type": "integer", "minimum": 0, "maximum": 9007199254740991, "description": "Milliseconds since device boot." },
+    "trigger": { "$ref": "#/$defs/ReportTrigger", "description": "Why this report was sent." },
+    "temperature_c": {
+      "description": "Air temperature, degrees Celsius, one decimal place, null on sensor fault.",
+      "anyOf": [{ "$ref": "common.json#/$defs/TemperatureC" }, { "type": "null" }]
+    },
+    "humidity_pct": {
+      "description": "Relative humidity, percent, integer 0 to 100, null on sensor fault.",
+      "anyOf": [{ "$ref": "common.json#/$defs/HumidityPct" }, { "type": "null" }]
+    },
+    "lux": {
+      "description": "Ambient illuminance, lux, integer 0 to 100000, null on sensor fault.",
+      "anyOf": [{ "$ref": "common.json#/$defs/Lux" }, { "type": "null" }]
+    },
+    "presence": { "$ref": "#/$defs/PresenceMap", "description": "PIR state per fitted zone." }
+  },
+  "$defs": {
+    "ReportTrigger": {
+      "title": "ReportTrigger",
+      "description": "interval is the periodic report, presence_change follows a PIR edge, query answers a query for sensors.",
+      "type": "string",
+      "enum": ["interval", "presence_change", "query"]
+    },
+    "PresenceMap": {
+      "title": "PresenceMap",
+      "description": "PIR motion per zone, true while motion is detected. Only zones listed in hello.capabilities.presence_zones appear.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "left": { "type": "boolean", "description": "Left zone PIR." },
+        "center": { "type": "boolean", "description": "Center zone PIR." },
+        "right": { "type": "boolean", "description": "Right zone PIR." },
+        "professor": { "type": "boolean", "description": "Professor zone PIR." }
+      }
+    }
+  },
+  "examples": [
+    {
+      "type": "sensor_report",
+      "seq": 812,
+      "ts": "2026-10-13T08:55:01.498Z",
+      "uptime_ms": 3605112,
+      "trigger": "presence_change",
+      "temperature_c": 23.4,
+      "humidity_pct": 41,
+      "lux": 140,
+      "presence": { "left": true, "center": false, "right": false, "professor": false }
+    }
+  ]
+}

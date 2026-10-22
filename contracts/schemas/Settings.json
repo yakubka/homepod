@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings",
+  "description": "Room configuration. Owned by the API, persisted on the Pi, published on settings.changed after every change. Every field is always present.",
+  "type": "object",
+  "required": ["room_id", "room_name", "timezone", "lighting", "climate", "voice", "announcements", "updated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "room_id": { "type": "string", "pattern": "^[a-z0-9-]{2,32}$", "description": "Room identifier, set at provisioning, read-only." },
+    "room_name": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Display name, 1 to 60 characters." },
+    "timezone": {
+      "type": "string",
+      "pattern": "^[A-Za-z_]+(/[A-Za-z0-9_+-]+)*$",
+      "description": "IANA time zone used by the app to display times, for example Asia/Tashkent. Every timestamp on the wire stays UTC."
+    },
+    "lighting": { "$ref": "#/$defs/LightingSettings", "description": "Lighting configuration." },
+    "climate": { "$ref": "#/$defs/ClimateSettings", "description": "Climate configuration." },
+    "voice": { "$ref": "#/$defs/VoiceSettings", "description": "Voice configuration." },
+    "announcements": { "$ref": "#/$defs/AnnouncementSettings", "description": "Announcement configuration." },
+    "updated_at": { "$ref": "common.json#/$defs/Timestamp", "description": "Last change, ISO 8601 UTC." }
+  },
+  "$defs": {
+    "LightingSettings": {
+      "title": "LightingSettings",
+      "description": "Lighting configuration.",
+      "type": "object",
+      "required": ["target_lux", "vacancy_timeout_s", "vacant_brightness", "daylight_harvesting", "presets"],
+      "additionalProperties": false,
+      "properties": {
+        "target_lux": { "$ref": "common.json#/$defs/Lux", "description": "Auto mode lights occupied zones only while ambient light is below this, lux." },
+        "vacancy_timeout_s": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 3600,
+          "description": "Seconds a zone must be unoccupied before auto mode dims it, integer 30 to 3600."
+        },
+        "vacant_brightness": { "$ref": "common.json#/$defs/Brightness", "description": "Brightness of unoccupied zones in auto mode while a lecture is in progress, percent 0 to 100. Outside lectures unoccupied zones are off." },
+        "daylight_harvesting": { "type": "boolean", "description": "When true, auto mode lowers brightness as ambient lux rises above target_lux." },
+        "presets": { "$ref": "#/$defs/LightingPresets", "description": "Per-mode brightness presets." }
+      }
+    },
+    "LightingPresets": {
+      "title": "LightingPresets",
+      "description": "Brightness per zone for the lecture and presentation modes.",
+      "type": "object",
+      "required": ["lecture", "presentation"],
+      "additionalProperties": false,
+      "properties": {
+        "lecture": { "$ref": "common.json#/$defs/ZoneLevels", "description": "Applied in lecture mode, percent 0 to 100 per zone." },
+        "presentation": { "$ref": "common.json#/$defs/ZoneLevels", "description": "Applied in presentation mode, percent 0 to 100 per zone." }
+      }
+    },
+    "ClimateSettings": {
+      "title": "ClimateSettings",
+      "description": "Climate configuration.",
+      "type": "object",
+      "required": ["default_target_c", "hysteresis_c"],
+      "additionalProperties": false,
+      "properties": {
+        "default_target_c": { "$ref": "common.json#/$defs/TargetTemperatureC", "description": "Target restored at the start of each lecture, degrees Celsius, one decimal place." },
+        "hysteresis_c": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 3,
+          "description": "Dead band around the target, degrees Celsius, one decimal place, 0.1 to 3.0."
+        }
+      }
+    },
+    "VoiceSettings": {
+      "title": "VoiceSettings",
+      "description": "Voice configuration.",
+      "type": "object",
+      "required": ["enabled", "wake_word", "language", "min_confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "description": "When false the voice stack ignores the wake word. POST /voice/ask keeps working." },
+        "wake_word": { "type": "string", "minLength": 2, "maxLength": 32, "description": "Wake word model name." },
+        "language": { "type": "string", "pattern": "^[a-z]{2}(-[A-Z]{2})?$", "description": "Recognition language as a BCP 47 tag." },
+        "min_confidence": {
+          "$ref": "common.json#/$defs/Confidence",
+          "description": "Intents below this confidence are turned into unknown, 0.0 to 1.0."
+        }
+      }
+    },
+    "AnnouncementSettings": {
+      "title": "AnnouncementSettings",
+      "description": "Announcement configuration.",
+      "type": "object",
+      "required": ["volume"],
+      "additionalProperties": false,
+      "properties": {
+        "volume": { "$ref": "common.json#/$defs/Volume", "description": "Default playback volume, percent 0 to 100." }
+      }
+    }
+  },
+  "examples": [
+    {
+      "room_id": "b-204",
+      "room_name": "Lecture Hall B-204",
+      "timezone": "Asia/Tashkent",
+      "lighting": {
+        "target_lux": 300,
+        "vacancy_timeout_s": 300,
+        "vacant_brightness": 20,
+        "daylight_harvesting": true,
+        "presets": {
+          "lecture": { "left": 80, "center": 80, "right": 80, "professor": 100 },
+          "presentation": { "left": 30, "center": 20, "right": 30, "professor": 60 }
+        }
+      },
+      "climate": { "default_target_c": 22.5, "hysteresis_c": 0.5 },
+      "voice": { "enabled": true, "wake_word": "hey_room", "language": "en-US", "min_confidence": 0.6 },
+      "announcements": { "volume": 70 },
+      "updated_at": "2026-10-12T16:40:00.000Z"
+    }
+  ]
+}

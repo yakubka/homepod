@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Announcement",
+  "description": "A prepared announcement the voice stack can speak through the room speaker. The set is managed by the API, the app only lists and plays them in this sprint.",
+  "type": "object",
+  "required": ["id", "title", "text", "category", "language", "duration_s", "last_played_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "common.json#/$defs/AnnouncementId", "description": "Announcement identifier." },
+    "title": { "type": "string", "minLength": 1, "maxLength": 80, "description": "Short title shown in the app, 1 to 80 characters." },
+    "text": { "type": "string", "minLength": 1, "maxLength": 600, "description": "Text that is spoken, 1 to 600 characters." },
+    "category": { "$ref": "#/$defs/AnnouncementCategory", "description": "Category, used for grouping and icon." },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+      "description": "Spoken language as a BCP 47 tag, for example en-US or uz-UZ."
+    },
+    "duration_s": { "type": "integer", "minimum": 1, "maximum": 120, "description": "Expected playback length, seconds, integer 1 to 120." },
+    "last_played_at": {
+      "description": "Last playback start, ISO 8601 UTC, null when never played.",
+      "anyOf": [{ "$ref": "common.json#/$defs/Timestamp" }, { "type": "null" }]
+    }
+  },
+  "$defs": {
+    "AnnouncementCategory": {
+      "title": "AnnouncementCategory",
+      "description": "Announcement category.",
+      "type": "string",
+      "enum": ["info", "reminder", "schedule", "emergency"]
+    }
+  },
+  "examples": [
+    {
+      "id": "ann_break10",
+      "title": "Ten minute break",
+      "text": "We will take a ten minute break. The lecture continues at the next bell.",
+      "category": "schedule",
+      "language": "en-US",
+      "duration_s": 6,
+      "last_played_at": "2026-10-12T10:15:00.000Z"
+    }
+  ]
+}

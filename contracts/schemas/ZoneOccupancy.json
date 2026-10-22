@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ZoneOccupancy",
+  "description": "Occupancy of one zone.",
+  "type": "object",
+  "required": ["zone", "count", "occupied", "confidence"],
+  "additionalProperties": false,
+  "properties": {
+    "zone": { "$ref": "common.json#/$defs/Zone", "description": "Zone." },
+    "count": {
+      "description": "People in the zone, integer 0 to 500, null when only presence is known, for example when the camera is down.",
+      "anyOf": [{ "$ref": "common.json#/$defs/PeopleCount" }, { "type": "null" }]
+    },
+    "occupied": { "type": "boolean", "description": "True when at least one person is in the zone." },
+    "confidence": { "$ref": "common.json#/$defs/Confidence", "description": "Confidence of this zone estimate, 0.0 to 1.0." }
+  },
+  "examples": [
+    { "zone": "left", "count": 3, "occupied": true, "confidence": 0.91 },
+    { "zone": "professor", "count": null, "occupied": true, "confidence": 0.6 }
+  ]
+}

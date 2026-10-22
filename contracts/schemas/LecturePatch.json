@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LecturePatch",
+  "description": "Request body of PATCH /lectures/{id}. Merge semantics, only the keys present are changed, null is never sent. An empty string clears course_code or notes. Setting status to cancelled cancels the lecture, no other status value is accepted. Finished and cancelled lectures cannot be patched.",
+  "type": "object",
+  "minProperties": 1,
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "maxLength": 120, "description": "Lecture title, 1 to 120 characters." },
+    "course_code": { "type": "string", "maxLength": 20, "description": "Course code, an empty string clears it." },
+    "lecturer": { "type": "string", "minLength": 1, "maxLength": 80, "description": "Lecturer display name, 1 to 80 characters." },
+    "starts_at": { "$ref": "common.json#/$defs/Timestamp", "description": "Start, ISO 8601 UTC." },
+    "ends_at": { "$ref": "common.json#/$defs/Timestamp", "description": "End, ISO 8601 UTC, strictly after the resulting starts_at." },
+    "lighting_mode": { "$ref": "Lecture.json#/$defs/LectureLightingMode", "description": "Lighting mode applied at start." },
+    "notes": { "type": "string", "maxLength": 500, "description": "Free text, an empty string clears it." },
+    "status": { "$ref": "#/$defs/LecturePatchStatus", "description": "Only cancelled is accepted." }
+  },
+  "$defs": {
+    "LecturePatchStatus": {
+      "title": "LecturePatchStatus",
+      "description": "Status a client may set on a lecture.",
+      "type": "string",
+      "enum": ["cancelled"]
+    }
+  },
+  "examples": [
+    { "ends_at": "2026-10-13T10:45:00.000Z", "notes": "" },
+    { "status": "cancelled" }
+  ]
+}

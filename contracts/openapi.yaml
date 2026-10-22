@@ -1,0 +1,1451 @@
+openapi: 3.1.0
+info:
+  title: Room Controller API
+  version: 1.0.3
+  summary: HTTP interface between the mobile app and the room Pi.
+  description: |
+    Contract v1 for the app, the API, the engine, the voice stack, the vision stack and the ESP32.
+    Domain objects live in `schemas/*.json` and are referenced from here, never redefined.
+
+    **Envelope.** Every JSON response is either `{"ok": true, "data": <payload>}` with a 2xx status
+    or an `ErrorResponse`, `{"ok": false, "error": {"code", "message", "detail"}}`, with the status
+    fixed by the code:
+
+    | code | HTTP | meaning |
+    |------|------|---------|
+    | `invalid_input` | 400 | Body, path or query failed validation. `detail.field` names the field. |
+    | `unauthorized` | 401 | `X-Room-Key` missing or wrong. |
+    | `not_found` | 404 | The addressed resource does not exist. |
+    | `conflict` | 409 | The request contradicts current state, for example overlapping lectures. |
+    | `internal` | 500 | Unexpected server error. |
+    | `device_unavailable` | 503 | The ESP32 link is down or the device rejected the command. |
+    | `degraded` | 503 | A component the request depends on is down. |
+    | `device_timeout` | 504 | The ESP32 did not acknowledge after all retries. |
+
+    **Actuator calls.** Endpoints that change lights, fan or presentation publish a `control.request`,
+    wait for the engine decision and for every resulting `device.ack`, then answer. The worst case is
+    about 1.6 seconds, bounded by the serial retry policy in `protocol.md`. Clients use a 3 second timeout.
+
+    **Units.** Brightness integer 0 to 100, lux integer, temperature Celsius with one decimal, humidity
+    integer percent, zones `left`, `center`, `right`, `professor`, timestamps ISO 8601 UTC ending in `Z`.
+    The complete table is `units.md`.
+
+    **Compatibility.** Clients ignore unknown fields. Servers never send undeclared fields.
+    Versioning rules are in `CHANGELOG.md`.
+  contact:
+    name: Interface contract owner
+servers:
+  - url: http://{host}:{port}/api/v1
+    description: Room Pi on the local network.
+    variables:
+      host:
+        default: room-pi.local
+        description: Hostname or IP address of the Pi.
+      port:
+        default: "8080"
+        description: API port.
+security:
+  - roomKey: []
+tags:
+  - name: system
+    description: Health and aggregated room state.
+  - name: sensors
+    description: Raw sensor readings and occupancy.
+  - name: lighting
+    description: Lighting state, modes and per-zone control.
+  - name: lectures
+    description: Lecture schedule.
+  - name: climate
+    description: Temperature target and fan.
+  - name: presentation
+    description: Presentation mode.
+  - name: announcements
+    description: Prepared spoken announcements.
+  - name: decisions
+    description: Engine decision log.
+  - name: settings
+    description: Room configuration.
+  - name: history
+    description: Bucketed time series.
+  - name: voice
+    description: Text requests handled like spoken ones.
+  - name: events
+    description: Live event stream.
+
+paths:
+  /health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: Service health
+      description: Liveness and readiness. Needs no key. Returns 200 while every critical component, api, bus, engine and bridge, is ok or degraded, and 503 when one is down.
+      security: []
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s http://room-pi.local:8080/api/v1/health
+      responses:
+        "200":
+          description: Services are up.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/HealthStatus.json" }
+              examples:
+                healthy:
+                  summary: All components up, vision slow
+                  value: {"ok": true, "data": {"status": "ok", "ts": "2026-10-13T08:55:05.000Z", "service_version": "0.3.1", "contract_version": "1.0.0", "uptime_s": 86400, "degradations": [], "components": [
+                    {"name": "api", "status": "ok", "last_seen_at": "2026-10-13T08:55:05.000Z", "detail": null, "uptime_s": 86400, "restarts": 0},
+                    {"name": "bus", "status": "ok", "last_seen_at": "2026-10-13T08:55:05.000Z", "detail": null, "uptime_s": 86400, "restarts": 0},
+                    {"name": "engine", "status": "ok", "last_seen_at": "2026-10-13T08:55:04.100Z", "detail": null, "uptime_s": 86400, "restarts": 0},
+                    {"name": "bridge", "status": "ok", "last_seen_at": "2026-10-13T08:55:04.900Z", "detail": null, "uptime_s": 86400, "restarts": 0},
+                    {"name": "esp32", "status": "ok", "last_seen_at": "2026-10-13T08:55:03.500Z", "detail": null, "uptime_s": 86400, "restarts": 0},
+                    {"name": "vision", "status": "degraded", "last_seen_at": "2026-10-13T08:55:04.000Z", "detail": "Running at 0.5 fps, target is 1 fps.", "uptime_s": 86400, "restarts": 0},
+                    {"name": "voice", "status": "ok", "last_seen_at": "2026-10-13T08:55:02.000Z", "detail": null, "uptime_s": 86400, "restarts": 0}]}}
+        "503":
+          description: A critical component is down.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                bridgeDown:
+                  summary: Serial bridge not running
+                  value: {"ok": false, "error": {"code": "degraded", "message": "The serial bridge is down, devices cannot be controlled.", "detail": {"components": [{"name": "bridge", "status": "down", "last_seen_at": "2026-10-13T08:51:40.000Z"}]}}}
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /state:
+    get:
+      tags: [system]
+      operationId: getState
+      summary: Aggregated room state
+      description: Last `system.state` published by the engine. Everything the home screen needs in one call.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" http://room-pi.local:8080/api/v1/state
+      responses:
+        "200":
+          description: Current state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/SystemState.json" }
+              examples:
+                occupied:
+                  $ref: "#/components/examples/SystemStateOk"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503":
+          description: The engine has not published a state yet.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                noState:
+                  summary: Engine not running
+                  value: {"ok": false, "error": {"code": "degraded", "message": "Room state is not available yet, the engine has not reported.", "detail": {"components": [{"name": "engine", "status": "down", "last_seen_at": null}]}}}
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /sensors:
+    get:
+      tags: [sensors]
+      operationId: getSensors
+      summary: Latest sensor readings
+      description: Latest environment and PIR readings from the ESP32 and the state of the serial link.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" http://room-pi.local:8080/api/v1/sensors
+      responses:
+        "200":
+          description: Latest readings.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/SensorsSnapshot.json" }
+              examples:
+                live:
+                  summary: Device online
+                  value: {"ok": true, "data": {
+                    "environment": {"ts": "2026-10-13T08:55:01.512Z", "device_id": "esp32-a1b2c3", "temperature_c": 23.4, "humidity_pct": 41, "lux": 140},
+                    "presence": {"ts": "2026-10-13T08:55:01.512Z", "device_id": "esp32-a1b2c3", "zones": [
+                      {"zone": "left", "present": true}, {"zone": "center", "present": false},
+                      {"zone": "right", "present": false}, {"zone": "professor", "present": false}]},
+                    "device": {"device_id": "esp32-a1b2c3", "status": "ok", "reason": null, "fw_version": "0.4.0", "protocol_version": "1.0.0", "uptime_ms": 3605112, "last_seen_at": "2026-10-13T08:55:01.512Z", "last_error": null}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503":
+          description: No report has ever been received from the device.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                neverSeen:
+                  summary: ESP32 not connected since start
+                  value: {"ok": false, "error": {"code": "device_unavailable", "message": "No sensor report has been received from the ESP32.", "detail": {"device": null, "reason": "no_report", "last_seen_at": null}}}
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /occupancy:
+    get:
+      tags: [sensors]
+      operationId: getOccupancy
+      summary: Room occupancy
+      description: Fused occupancy. Vision counts while vision is fresh, PIR presence with null counts when it is stale.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" http://room-pi.local:8080/api/v1/occupancy
+      responses:
+        "200":
+          description: Current occupancy.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/OccupancySnapshot.json" }
+              examples:
+                vision:
+                  summary: Camera counts
+                  value: {"ok": true, "data": {"ts": "2026-10-13T08:55:02.140Z", "total": 4, "occupied": true, "zones": [
+                    {"zone": "left", "count": 3, "occupied": true, "confidence": 0.91},
+                    {"zone": "center", "count": 1, "occupied": true, "confidence": 0.87},
+                    {"zone": "right", "count": 0, "occupied": false, "confidence": 0.95},
+                    {"zone": "professor", "count": 0, "occupied": false, "confidence": 0.97}],
+                    "source": "vision", "confidence": 0.9, "stale": false, "frame_id": 18342}}
+                presenceFallback:
+                  summary: Camera down, PIR only
+                  value: {"ok": true, "data": {"ts": "2026-10-13T08:57:11.020Z", "total": null, "occupied": true, "zones": [
+                    {"zone": "left", "count": null, "occupied": true, "confidence": 0.6},
+                    {"zone": "center", "count": null, "occupied": false, "confidence": 0.6},
+                    {"zone": "right", "count": null, "occupied": false, "confidence": 0.6},
+                    {"zone": "professor", "count": null, "occupied": false, "confidence": 0.6}],
+                    "source": "presence", "confidence": 0.6, "stale": false, "frame_id": null}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503":
+          description: Neither vision nor PIR data is available.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                blind:
+                  summary: Camera and ESP32 both down
+                  value: {"ok": false, "error": {"code": "degraded", "message": "Occupancy is unknown, vision and presence sensors are both unavailable.", "detail": {"components": [{"name": "vision", "status": "down"}, {"name": "esp32", "status": "down"}]}}}
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /lighting:
+    get:
+      tags: [lighting]
+      operationId: getLighting
+      summary: Lighting state
+      description: Mode and per-zone brightness as last commanded, with acknowledgement status.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" http://room-pi.local:8080/api/v1/lighting
+      responses:
+        "200":
+          description: Current lighting.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/LightingState.json" }
+              examples:
+                auto:
+                  $ref: "#/components/examples/LightingAuto"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503":
+          description: The engine is not running.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                engineDown:
+                  summary: Engine not running
+                  value: {"ok": false, "error": {"code": "degraded", "message": "Lighting state is unknown, the engine is not running.", "detail": {"components": [{"name": "engine", "status": "down"}]}}}
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /lighting/mode:
+    post:
+      tags: [lighting]
+      operationId: setLightingMode
+      summary: Switch lighting mode
+      description: Applies a mode to every zone. lecture and presentation use the presets from Settings, auto hands control to the engine rules, off sets every zone to 0. Answers once every zone command is acknowledged.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -X POST -H "X-Room-Key: $ROOM_KEY" -H "Content-Type: application/json" \
+              -d '{"mode":"lecture"}' http://room-pi.local:8080/api/v1/lighting/mode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "./schemas/LightingModeRequest.json" }
+            examples:
+              lecture:
+                summary: Lecture preset
+                value: {"mode": "lecture"}
+              allOff:
+                summary: Everything off with a slow fade
+                value: {"mode": "off", "fade_ms": 2000}
+      responses:
+        "200":
+          description: Mode applied and acknowledged.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/LightingState.json" }
+              examples:
+                lecture:
+                  $ref: "#/components/examples/LightingLecture"
+        "400":
+          description: Invalid body.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                manualNotAllowed:
+                  summary: manual cannot be selected directly
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "mode must be one of auto, lecture, presentation, off.", "detail": {"field": "mode", "reason": "not_allowed"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/DeviceUnavailable" }
+        "504": { $ref: "#/components/responses/DeviceTimeout" }
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /lighting/zone:
+    post:
+      tags: [lighting]
+      operationId: setZoneLight
+      summary: Set one zone
+      description: Sets one zone and switches the mode to manual. Other zones keep their brightness. Answers once the command is acknowledged.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -X POST -H "X-Room-Key: $ROOM_KEY" -H "Content-Type: application/json" \
+              -d '{"zone":"professor","brightness":100}' http://room-pi.local:8080/api/v1/lighting/zone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "./schemas/ZoneLightRequest.json" }
+            examples:
+              professorFull:
+                summary: Professor zone to full
+                value: {"zone": "professor", "brightness": 100}
+              leftDim:
+                summary: Left zone dimmed slowly
+                value: {"zone": "left", "brightness": 40, "fade_ms": 1000}
+      responses:
+        "200":
+          description: Zone set and acknowledged.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/LightingState.json" }
+              examples:
+                manual:
+                  $ref: "#/components/examples/LightingManual"
+        "400":
+          description: Invalid body.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                outOfRange:
+                  summary: Brightness above 100
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "brightness must be an integer between 0 and 100.", "detail": {"field": "brightness", "reason": "out_of_range"}}}
+                unknownZone:
+                  summary: Zone not in the enum
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "zone must be one of left, center, right, professor.", "detail": {"field": "zone", "reason": "invalid_enum"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/DeviceUnavailable" }
+        "504": { $ref: "#/components/responses/DeviceTimeout" }
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /lectures:
+    get:
+      tags: [lectures]
+      operationId: listLectures
+      summary: List lectures
+      description: Lectures overlapping the window [from, to), ordered by starts_at. Default window is the current UTC day plus 7 days.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" "http://room-pi.local:8080/api/v1/lectures?from=2026-10-13T00:00:00.000Z&to=2026-10-14T00:00:00.000Z"
+      parameters:
+        - name: from
+          in: query
+          description: Window start, ISO 8601 UTC, inclusive.
+          schema: { $ref: "./schemas/common.json#/$defs/Timestamp" }
+          example: "2026-10-13T00:00:00.000Z"
+        - name: to
+          in: query
+          description: Window end, ISO 8601 UTC, exclusive, at most 31 days after from.
+          schema: { $ref: "./schemas/common.json#/$defs/Timestamp" }
+          example: "2026-10-14T00:00:00.000Z"
+        - name: status
+          in: query
+          description: Only lectures with this status.
+          schema: { $ref: "./schemas/Lecture.json#/$defs/LectureStatus" }
+          example: scheduled
+      responses:
+        "200":
+          description: Lectures in the window.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data:
+                    type: array
+                    items: { $ref: "./schemas/Lecture.json" }
+              examples:
+                day:
+                  summary: Two lectures on one day
+                  value: {"ok": true, "data": [
+                    {"id": "lec_7f3k2m9q1x", "title": "Distributed Systems, week 7", "course_code": "CS301", "lecturer": "Dr. Karimova", "starts_at": "2026-10-13T09:00:00.000Z", "ends_at": "2026-10-13T10:30:00.000Z", "status": "scheduled", "lighting_mode": "presentation", "notes": "Guest talk in the second half.", "created_at": "2026-10-10T14:02:11.000Z", "updated_at": "2026-10-10T14:02:11.000Z"},
+                    {"id": "lec_2b8n4v6c0x", "title": "Operating Systems lab", "course_code": "CS210", "lecturer": "Mr. Tursunov", "starts_at": "2026-10-13T11:00:00.000Z", "ends_at": "2026-10-13T12:30:00.000Z", "status": "scheduled", "lighting_mode": "lecture", "notes": null, "created_at": "2026-10-09T08:30:00.000Z", "updated_at": "2026-10-11T12:00:00.000Z"}]}
+        "400":
+          description: Invalid query.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                reversedWindow:
+                  summary: to before from
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "to must be after from.", "detail": {"field": "to", "reason": "before_from"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        default: { $ref: "#/components/responses/Unexpected" }
+    post:
+      tags: [lectures]
+      operationId: createLecture
+      summary: Create a lecture
+      description: Creates a lecture. Lectures that are not cancelled must not overlap. Publishes schedule.lecture with event created.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -X POST -H "X-Room-Key: $ROOM_KEY" -H "Content-Type: application/json" \
+              -d '{"title":"Distributed Systems, week 7","course_code":"CS301","lecturer":"Dr. Karimova","starts_at":"2026-10-13T09:00:00.000Z","ends_at":"2026-10-13T10:30:00.000Z","lighting_mode":"presentation"}' \
+              http://room-pi.local:8080/api/v1/lectures
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "./schemas/LectureCreate.json" }
+            examples:
+              withPresentation:
+                summary: Lecture that starts in presentation mode
+                value: {"title": "Distributed Systems, week 7", "course_code": "CS301", "lecturer": "Dr. Karimova", "starts_at": "2026-10-13T09:00:00.000Z", "ends_at": "2026-10-13T10:30:00.000Z", "lighting_mode": "presentation", "notes": "Guest talk in the second half."}
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/Lecture.json" }
+              examples:
+                created:
+                  $ref: "#/components/examples/LectureScheduled"
+        "400":
+          description: Invalid body.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                endBeforeStart:
+                  summary: ends_at not after starts_at
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "ends_at must be after starts_at.", "detail": {"field": "ends_at", "reason": "before_start"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: Overlaps another lecture.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                overlap:
+                  summary: Time slot taken
+                  value: {"ok": false, "error": {"code": "conflict", "message": "The lecture overlaps Operating Systems lab.", "detail": {"resource": "lecture", "conflicting_id": "lec_2b8n4v6c0x"}}}
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /lectures/current:
+    get:
+      tags: [lectures]
+      operationId: getCurrentLecture
+      summary: Current and next lecture
+      description: Lecture in progress at `at`, default now, and the first scheduled lecture after it.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" http://room-pi.local:8080/api/v1/lectures/current
+      parameters:
+        - name: at
+          in: query
+          description: Instant to evaluate, ISO 8601 UTC, default the server time.
+          schema: { $ref: "./schemas/common.json#/$defs/Timestamp" }
+          example: "2026-10-13T09:12:00.000Z"
+      responses:
+        "200":
+          description: Current and next lecture, either may be null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/CurrentLecture.json" }
+              examples:
+                inLecture:
+                  summary: A lecture is running, another follows
+                  value: {"ok": true, "data": {"at": "2026-10-13T09:12:00.000Z",
+                    "current": {"id": "lec_7f3k2m9q1x", "title": "Distributed Systems, week 7", "course_code": "CS301", "lecturer": "Dr. Karimova", "starts_at": "2026-10-13T09:00:00.000Z", "ends_at": "2026-10-13T10:30:00.000Z", "status": "in_progress", "lighting_mode": "presentation", "notes": "Guest talk in the second half.", "created_at": "2026-10-10T14:02:11.000Z", "updated_at": "2026-10-10T14:02:11.000Z"},
+                    "next": {"id": "lec_2b8n4v6c0x", "title": "Operating Systems lab", "course_code": "CS210", "lecturer": "Mr. Tursunov", "starts_at": "2026-10-13T11:00:00.000Z", "ends_at": "2026-10-13T12:30:00.000Z", "status": "scheduled", "lighting_mode": "lecture", "notes": null, "created_at": "2026-10-09T08:30:00.000Z", "updated_at": "2026-10-11T12:00:00.000Z"}}}
+                free:
+                  summary: Nothing scheduled
+                  value: {"ok": true, "data": {"at": "2026-10-13T18:00:00.000Z", "current": null, "next": null}}
+        "400":
+          description: Invalid query.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                badInstant:
+                  summary: Timestamp without Z
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "at must be an ISO 8601 UTC timestamp ending in Z.", "detail": {"field": "at", "reason": "invalid_format"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /lectures/{id}:
+    parameters:
+      - $ref: "#/components/parameters/LectureId"
+    get:
+      tags: [lectures]
+      operationId: getLecture
+      summary: Get a lecture
+      description: One lecture by id.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" http://room-pi.local:8080/api/v1/lectures/lec_7f3k2m9q1x
+      responses:
+        "200":
+          description: The lecture.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/Lecture.json" }
+              examples:
+                found:
+                  $ref: "#/components/examples/LectureScheduled"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/LectureNotFound" }
+        default: { $ref: "#/components/responses/Unexpected" }
+    patch:
+      tags: [lectures]
+      operationId: updateLecture
+      summary: Update or cancel a lecture
+      description: Merge patch. Only scheduled and in_progress lectures can be changed. Publishes schedule.lecture with event updated.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -X PATCH -H "X-Room-Key: $ROOM_KEY" -H "Content-Type: application/json" \
+              -d '{"ends_at":"2026-10-13T10:45:00.000Z","notes":""}' http://room-pi.local:8080/api/v1/lectures/lec_7f3k2m9q1x
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "./schemas/LecturePatch.json" }
+            examples:
+              extend:
+                summary: Extend by 15 minutes and clear notes
+                value: {"ends_at": "2026-10-13T10:45:00.000Z", "notes": ""}
+              cancel:
+                summary: Cancel
+                value: {"status": "cancelled"}
+      responses:
+        "200":
+          description: Updated lecture.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/Lecture.json" }
+              examples:
+                extended:
+                  summary: After the extend example
+                  value: {"ok": true, "data": {"id": "lec_7f3k2m9q1x", "title": "Distributed Systems, week 7", "course_code": "CS301", "lecturer": "Dr. Karimova", "starts_at": "2026-10-13T09:00:00.000Z", "ends_at": "2026-10-13T10:45:00.000Z", "status": "scheduled", "lighting_mode": "presentation", "notes": null, "created_at": "2026-10-10T14:02:11.000Z", "updated_at": "2026-10-12T17:20:41.000Z"}}
+        "400":
+          description: Invalid body.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                emptyPatch:
+                  summary: Body without fields
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "The patch must change at least one field.", "detail": {"field": null, "reason": "empty_patch"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/LectureNotFound" }
+        "409":
+          description: The lecture is read-only or the change would overlap another lecture.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                finished:
+                  summary: Lecture already finished
+                  value: {"ok": false, "error": {"code": "conflict", "message": "Finished lectures cannot be changed.", "detail": {"resource": "lecture", "conflicting_id": null, "status": "finished"}}}
+        default: { $ref: "#/components/responses/Unexpected" }
+    delete:
+      tags: [lectures]
+      operationId: deleteLecture
+      summary: Delete a lecture
+      description: Removes a scheduled, finished or cancelled lecture and returns its last state. A lecture in progress cannot be deleted, cancel it with PATCH instead. Publishes schedule.lecture with event deleted.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -X DELETE -H "X-Room-Key: $ROOM_KEY" http://room-pi.local:8080/api/v1/lectures/lec_2b8n4v6c0x
+      responses:
+        "200":
+          description: Deleted, the body is the last state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/Lecture.json" }
+              examples:
+                deleted:
+                  summary: Deleted scheduled lecture
+                  value: {"ok": true, "data": {"id": "lec_2b8n4v6c0x", "title": "Operating Systems lab", "course_code": "CS210", "lecturer": "Mr. Tursunov", "starts_at": "2026-10-13T11:00:00.000Z", "ends_at": "2026-10-13T12:30:00.000Z", "status": "scheduled", "lighting_mode": "lecture", "notes": null, "created_at": "2026-10-09T08:30:00.000Z", "updated_at": "2026-10-11T12:00:00.000Z"}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/LectureNotFound" }
+        "409":
+          description: The lecture is in progress.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                inProgress:
+                  summary: Running lecture
+                  value: {"ok": false, "error": {"code": "conflict", "message": "A lecture in progress cannot be deleted, cancel it instead.", "detail": {"resource": "lecture", "conflicting_id": null, "status": "in_progress"}}}
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /climate:
+    get:
+      tags: [climate]
+      operationId: getClimate
+      summary: Climate state
+      description: Temperature, humidity, target and fan.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" http://room-pi.local:8080/api/v1/climate
+      responses:
+        "200":
+          description: Current climate.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/ClimateState.json" }
+              examples:
+                warm:
+                  $ref: "#/components/examples/ClimateAuto"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503":
+          description: The engine is not running.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                engineDown:
+                  summary: Engine not running
+                  value: {"ok": false, "error": {"code": "degraded", "message": "Climate state is unknown, the engine is not running.", "detail": {"components": [{"name": "engine", "status": "down"}]}}}
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /climate/target:
+    post:
+      tags: [climate]
+      operationId: setClimateTarget
+      summary: Set target temperature
+      description: Sets the target and switches climate mode to auto. When the engine changes the fan as a result, answers after the fan command is acknowledged.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -X POST -H "X-Room-Key: $ROOM_KEY" -H "Content-Type: application/json" \
+              -d '{"target_c":22.5}' http://room-pi.local:8080/api/v1/climate/target
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "./schemas/ClimateTargetRequest.json" }
+            examples:
+              comfortable:
+                summary: 22.5 degrees
+                value: {"target_c": 22.5}
+      responses:
+        "200":
+          description: Target applied.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/ClimateState.json" }
+              examples:
+                applied:
+                  $ref: "#/components/examples/ClimateAuto"
+        "400":
+          description: Invalid body.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                tooHot:
+                  summary: Target above 30.0
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "target_c must be between 16.0 and 30.0.", "detail": {"field": "target_c", "reason": "out_of_range"}}}
+                tooPrecise:
+                  summary: Two decimals
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "target_c must have at most one decimal place.", "detail": {"field": "target_c", "reason": "precision"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/DeviceUnavailable" }
+        "504": { $ref: "#/components/responses/DeviceTimeout" }
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /presentation:
+    post:
+      tags: [presentation]
+      operationId: setPresentation
+      summary: Start or stop presentation mode
+      description: start switches lighting to the presentation preset, stop returns to the mode of the lecture in progress, or auto when there is none. Idempotent.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -X POST -H "X-Room-Key: $ROOM_KEY" -H "Content-Type: application/json" \
+              -d '{"action":"start"}' http://room-pi.local:8080/api/v1/presentation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "./schemas/PresentationRequest.json" }
+            examples:
+              start:
+                summary: Start for the lecture in progress
+                value: {"action": "start"}
+              stop:
+                summary: Stop
+                value: {"action": "stop"}
+      responses:
+        "200":
+          description: Presentation state after the request.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/PresentationState.json" }
+              examples:
+                started:
+                  summary: Started from the app
+                  value: {"ok": true, "data": {"active": true, "started_at": "2026-10-13T09:05:00.000Z", "started_by": "app", "lecture_id": "lec_7f3k2m9q1x"}}
+                stopped:
+                  summary: Stopped
+                  value: {"ok": true, "data": {"active": false, "started_at": null, "started_by": null, "lecture_id": null}}
+        "400":
+          description: Invalid body.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                lectureOnStop:
+                  summary: lecture_id sent with stop
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "lecture_id is only accepted with start.", "detail": {"field": "lecture_id", "reason": "not_allowed"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/LectureNotFound" }
+        "503": { $ref: "#/components/responses/DeviceUnavailable" }
+        "504": { $ref: "#/components/responses/DeviceTimeout" }
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /announcements:
+    get:
+      tags: [announcements]
+      operationId: listAnnouncements
+      summary: List announcements
+      description: Every prepared announcement, ordered by title.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" http://room-pi.local:8080/api/v1/announcements
+      responses:
+        "200":
+          description: Announcements.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data:
+                    type: array
+                    items: { $ref: "./schemas/Announcement.json" }
+              examples:
+                all:
+                  summary: Two announcements
+                  value: {"ok": true, "data": [
+                    {"id": "ann_phones", "title": "Phones on silent", "text": "Please switch your phones to silent. The lecture is about to begin.", "category": "reminder", "language": "en-US", "duration_s": 5, "last_played_at": null},
+                    {"id": "ann_break10", "title": "Ten minute break", "text": "We will take a ten minute break. The lecture continues at the next bell.", "category": "schedule", "language": "en-US", "duration_s": 6, "last_played_at": "2026-10-12T10:15:00.000Z"}]}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /announcements/{id}/play:
+    post:
+      tags: [announcements]
+      operationId: playAnnouncement
+      summary: Play an announcement
+      description: Speaks the announcement through the room speaker. Answers when playback has started. Only one playback runs at a time.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -X POST -H "X-Room-Key: $ROOM_KEY" -H "Content-Type: application/json" \
+              -d '{"volume":70}' http://room-pi.local:8080/api/v1/announcements/ann_break10/play
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Announcement id.
+          schema: { $ref: "./schemas/common.json#/$defs/AnnouncementId" }
+          example: ann_break10
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "./schemas/PlayAnnouncementRequest.json" }
+            examples:
+              louder:
+                summary: Override the volume
+                value: {"volume": 70}
+              defaults:
+                summary: Settings volume
+                value: {}
+      responses:
+        "200":
+          description: Playback started.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/AnnouncementPlayback.json" }
+              examples:
+                playing:
+                  summary: Break announcement playing
+                  value: {"ok": true, "data": {"playback_id": "pb_4m8n2b6v1c", "announcement_id": "ann_break10", "decision_id": "dec_01h9xa3r5w", "started_at": "2026-10-13T10:15:00.120Z", "expected_end_at": "2026-10-13T10:15:06.120Z", "volume": 70}}
+        "400":
+          description: Invalid body.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                volume:
+                  summary: Volume above 100
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "volume must be an integer between 0 and 100.", "detail": {"field": "volume", "reason": "out_of_range"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: Unknown announcement.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                unknown:
+                  summary: No such id
+                  value: {"ok": false, "error": {"code": "not_found", "message": "Announcement ann_fire was not found.", "detail": {"resource": "announcement", "id": "ann_fire"}}}
+        "409":
+          description: Another playback is running.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                busy:
+                  summary: Speaker busy
+                  value: {"ok": false, "error": {"code": "conflict", "message": "Another announcement is playing until 2026-10-13T10:15:06.120Z.", "detail": {"resource": "playback", "conflicting_id": "pb_4m8n2b6v1c"}}}
+        "503":
+          description: The voice stack or speaker is down.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                speakerDown:
+                  summary: Voice stack not running
+                  value: {"ok": false, "error": {"code": "degraded", "message": "Announcements cannot be played, the voice stack is down.", "detail": {"components": [{"name": "voice", "status": "down"}]}}}
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /decisions:
+    get:
+      tags: [decisions]
+      operationId: listDecisions
+      summary: Decision log
+      description: Most recent engine decisions first, with final command statuses. Kept for 7 days.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" "http://room-pi.local:8080/api/v1/decisions?limit=20"
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of decisions, 1 to 200, default 50.
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+          example: 20
+        - name: before
+          in: query
+          description: Only decisions strictly older than this instant, ISO 8601 UTC, for paging.
+          schema: { $ref: "./schemas/common.json#/$defs/Timestamp" }
+          example: "2026-10-13T10:00:00.000Z"
+        - name: type
+          in: query
+          description: Only decisions with this action type.
+          schema: { $ref: "./schemas/common.json#/$defs/ActionType" }
+          example: lighting.set_zone
+      responses:
+        "200":
+          description: Decisions, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data:
+                    type: array
+                    items: { $ref: "./schemas/Decision.json" }
+              examples:
+                recent:
+                  summary: A voice answer and an occupancy rule
+                  value: {"ok": true, "data": [
+                    {"id": "dec_01h9x7q8zt", "ts": "2026-10-13T09:14:31.020Z", "trigger": {"type": "voice", "topic": "voice.intent", "event_id": "evt_0b7c2d9e4f"}, "rule": "voice_query_temperature", "action": {"type": "answer", "zone": null, "params": {}}, "outcome": "answered", "summary": "Answered a temperature question.", "commands": [], "request_id": "req_5t2w9x1c7v", "reply_text": "It is 23.4 degrees in the room."},
+                    {"id": "dec_01h9x4k2pq", "ts": "2026-10-13T08:55:02.205Z", "trigger": {"type": "occupancy", "topic": "perception.occupancy", "event_id": "evt_9k2j4h1m0p"}, "rule": "occupancy_lights_on", "action": {"type": "lighting.set_zone", "zone": "left", "params": {"brightness": 80, "fade_ms": 400}}, "outcome": "issued", "summary": "Left zone became occupied and ambient light is 140 lux, below the 300 lux target.", "commands": [{"cmd_id": "c00a41f2e", "type": "set_zone_light", "status": "applied"}], "request_id": null, "reply_text": null}]}
+        "400":
+          description: Invalid query.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                limit:
+                  summary: limit too large
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "limit must be between 1 and 200.", "detail": {"field": "limit", "reason": "out_of_range"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /settings:
+    get:
+      tags: [settings]
+      operationId: getSettings
+      summary: Room settings
+      description: Full room configuration.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" http://room-pi.local:8080/api/v1/settings
+      responses:
+        "200":
+          description: Settings.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/Settings.json" }
+              examples:
+                current:
+                  $ref: "#/components/examples/SettingsDefault"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        default: { $ref: "#/components/responses/Unexpected" }
+    patch:
+      tags: [settings]
+      operationId: updateSettings
+      summary: Change settings
+      description: Deep merge of the body into the settings. Returns the full result and publishes settings.changed.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -X PATCH -H "X-Room-Key: $ROOM_KEY" -H "Content-Type: application/json" \
+              -d '{"lighting":{"target_lux":350}}' http://room-pi.local:8080/api/v1/settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "./schemas/SettingsPatch.json" }
+            examples:
+              brighter:
+                summary: Raise the lux target and dim the center in presentations
+                value: {"lighting": {"target_lux": 350, "presets": {"presentation": {"center": 10}}}}
+      responses:
+        "200":
+          description: Settings after the merge.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/Settings.json" }
+              examples:
+                merged:
+                  summary: After the brighter example
+                  value: {"ok": true, "data": {"room_id": "b-204", "room_name": "Lecture Hall B-204", "timezone": "Asia/Tashkent",
+                    "lighting": {"target_lux": 350, "vacancy_timeout_s": 300, "vacant_brightness": 20, "daylight_harvesting": true, "presets": {
+                      "lecture": {"left": 80, "center": 80, "right": 80, "professor": 100},
+                      "presentation": {"left": 30, "center": 10, "right": 30, "professor": 60}}},
+                    "climate": {"default_target_c": 22.5, "hysteresis_c": 0.5},
+                    "voice": {"enabled": true, "wake_word": "hey_room", "language": "en-US", "min_confidence": 0.6},
+                    "announcements": {"volume": 70},
+                    "updated_at": "2026-10-13T07:30:12.000Z"}}
+        "400":
+          description: Invalid body.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                timeoutTooShort:
+                  summary: Vacancy timeout under 30 seconds
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "lighting.vacancy_timeout_s must be between 30 and 3600.", "detail": {"field": "lighting.vacancy_timeout_s", "reason": "out_of_range"}}}
+                readOnly:
+                  summary: Read-only field
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "room_id cannot be changed.", "detail": {"field": "room_id", "reason": "read_only"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /history:
+    get:
+      tags: [history]
+      operationId: getHistory
+      summary: Metric history
+      description: Bucketed means of one metric. The window may hold at most 1440 buckets. Data is kept for 30 days.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -H "X-Room-Key: $ROOM_KEY" "http://room-pi.local:8080/api/v1/history?metric=temperature_c&from=2026-10-13T09:00:00.000Z&to=2026-10-13T09:15:00.000Z&bucket_s=300"
+      parameters:
+        - name: metric
+          in: query
+          required: true
+          description: Metric to return.
+          schema: { $ref: "./schemas/HistorySeries.json#/$defs/HistoryMetric" }
+          example: temperature_c
+        - name: from
+          in: query
+          required: true
+          description: Window start, ISO 8601 UTC, rounded down to the bucket.
+          schema: { $ref: "./schemas/common.json#/$defs/Timestamp" }
+          example: "2026-10-13T09:00:00.000Z"
+        - name: to
+          in: query
+          required: true
+          description: Window end, ISO 8601 UTC, rounded up to the bucket.
+          schema: { $ref: "./schemas/common.json#/$defs/Timestamp" }
+          example: "2026-10-13T09:15:00.000Z"
+        - name: bucket_s
+          in: query
+          description: Bucket width in seconds, default 300.
+          schema: { $ref: "./schemas/HistorySeries.json#/$defs/HistoryBucket" }
+          example: 300
+        - name: zone
+          in: query
+          description: Zone, only valid with metric occupancy. Omitted means the whole room.
+          schema: { $ref: "./schemas/common.json#/$defs/Zone" }
+          example: left
+      responses:
+        "200":
+          description: The series.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/HistorySeries.json" }
+              examples:
+                temperature:
+                  summary: Fifteen minutes of temperature
+                  value: {"ok": true, "data": {"metric": "temperature_c", "unit": "celsius", "zone": null, "from": "2026-10-13T09:00:00.000Z", "to": "2026-10-13T09:15:00.000Z", "bucket_s": 300, "points": [
+                    {"ts": "2026-10-13T09:00:00.000Z", "value": 23.1},
+                    {"ts": "2026-10-13T09:05:00.000Z", "value": 23.6},
+                    {"ts": "2026-10-13T09:10:00.000Z", "value": null}]}}
+        "400":
+          description: Invalid query.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                tooManyPoints:
+                  summary: Window too long for the bucket
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "The window holds 4320 buckets, at most 1440 are allowed.", "detail": {"field": "to", "reason": "too_many_points"}}}
+                zoneWithoutOccupancy:
+                  summary: zone with a room metric
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "zone is only valid with metric occupancy.", "detail": {"field": "zone", "reason": "not_allowed"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503":
+          description: The recorder is down.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                recorderDown:
+                  summary: History store unavailable
+                  value: {"ok": false, "error": {"code": "degraded", "message": "History is unavailable, the recorder is down.", "detail": {"components": [{"name": "recorder", "status": "down"}]}}}
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /voice/ask:
+    post:
+      tags: [voice]
+      operationId: askVoice
+      summary: Ask in text
+      description: Runs the text through the same parser and engine path as a spoken request. Answers after the decision and, for device actions, after every acknowledgement.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -X POST -H "X-Room-Key: $ROOM_KEY" -H "Content-Type: application/json" \
+              -d '{"text":"what is the temperature in here"}' http://room-pi.local:8080/api/v1/voice/ask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "./schemas/VoiceAskRequest.json" }
+            examples:
+              question:
+                summary: Temperature question
+                value: {"text": "what is the temperature in here"}
+              command:
+                summary: Lighting command with a client id
+                value: {"text": "set the left lights to forty percent", "request_id": "req_8d1f6g3h2j"}
+      responses:
+        "200":
+          description: Understood and handled, or not understood.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                additionalProperties: false
+                properties:
+                  ok: { const: true }
+                  data: { $ref: "./schemas/VoiceAskResponse.json" }
+              examples:
+                answered:
+                  summary: Query answered
+                  value: {"ok": true, "data": {"request_id": "req_5t2w9x1c7v", "command": {"request_id": "req_5t2w9x1c7v", "intent": "query_temperature", "action": "query", "target": {"type": "climate", "zone": null}, "params": {}, "confidence": 0.97, "raw_text": "what is the temperature in here", "source": "app"}, "outcome": "answered", "reply_text": "It is 23.4 degrees in the room.", "decision_id": "dec_01h9x7q8zt"}}
+                executed:
+                  summary: Lights changed
+                  value: {"ok": true, "data": {"request_id": "req_8d1f6g3h2j", "command": {"request_id": "req_8d1f6g3h2j", "intent": "set_brightness", "action": "set", "target": {"type": "lighting", "zone": "left"}, "params": {"brightness": 40}, "confidence": 0.95, "raw_text": "set the left lights to forty percent", "source": "app"}, "outcome": "executed", "reply_text": "Left lights set to 40 percent.", "decision_id": "dec_01h9xc6v2n"}}
+                notUnderstood:
+                  summary: Unknown intent
+                  value: {"ok": true, "data": {"request_id": "req_2a9s8d7f6g", "command": {"request_id": "req_2a9s8d7f6g", "intent": "unknown", "action": "none", "target": {"type": "none", "zone": null}, "params": {}, "confidence": 0.31, "raw_text": "open the window", "source": "app"}, "outcome": "not_understood", "reply_text": "Sorry, I can't help with that yet.", "decision_id": null}}
+        "400":
+          description: Invalid body.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                empty:
+                  summary: Empty text
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "text must be 1 to 200 characters.", "detail": {"field": "text", "reason": "length"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503":
+          description: The voice parser is not running.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                parserDown:
+                  summary: Voice stack down
+                  value: {"ok": false, "error": {"code": "degraded", "message": "Requests cannot be understood right now, the voice stack is down.", "detail": {"components": [{"name": "voice", "status": "down"}]}}}
+        "504": { $ref: "#/components/responses/DeviceTimeout" }
+        default: { $ref: "#/components/responses/Unexpected" }
+
+  /events:
+    get:
+      tags: [events]
+      operationId: streamEvents
+      summary: Live event stream
+      description: |
+        Server-Sent Events. Every event has `id` equal to the envelope id, `event` equal to the topic and
+        `data` equal to one BusEnvelope as compact JSON on a single line. The latest system.state is sent
+        immediately after connecting. A comment line `: keepalive` is sent every 15 seconds. There is no
+        replay, a client that reconnects calls GET /state to resynchronise.
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -N -H "X-Room-Key: $ROOM_KEY" -H "Accept: text/event-stream" "http://room-pi.local:8080/api/v1/events?topics=system.state,decision.action"
+      parameters:
+        - name: topics
+          in: query
+          description: Comma separated topics to receive, default system.state and decision.action.
+          style: form
+          explode: false
+          schema:
+            type: array
+            minItems: 1
+            uniqueItems: true
+            items: { $ref: "./schemas/common.json#/$defs/BusTopic" }
+          example: [system.state, decision.action, perception.occupancy]
+      responses:
+        "200":
+          description: Event stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE stream, each data line is a BusEnvelope.
+              examples:
+                twoEvents:
+                  summary: An occupancy event and the decision it caused
+                  value: |
+                    id: evt_9k2j4h1m0p
+                    event: perception.occupancy
+                    data: {"id":"evt_9k2j4h1m0p","topic":"perception.occupancy","ts":"2026-10-13T08:55:02.180Z","source":"vision","contract_version":"1.0.0","correlation_id":null,"payload":{"ts":"2026-10-13T08:55:02.140Z","total":1,"occupied":true,"zones":[{"zone":"left","count":1,"occupied":true,"confidence":0.9},{"zone":"center","count":0,"occupied":false,"confidence":0.95},{"zone":"right","count":0,"occupied":false,"confidence":0.96},{"zone":"professor","count":0,"occupied":false,"confidence":0.97}],"source":"vision","confidence":0.9,"stale":false,"frame_id":18342}}
+
+                    id: evt_3c6v9b2n5m
+                    event: decision.action
+                    data: {"id":"evt_3c6v9b2n5m","topic":"decision.action","ts":"2026-10-13T08:55:02.210Z","source":"engine","contract_version":"1.0.0","correlation_id":"dec_01h9x4k2pq","payload":{"id":"dec_01h9x4k2pq","ts":"2026-10-13T08:55:02.205Z","trigger":{"type":"occupancy","topic":"perception.occupancy","event_id":"evt_9k2j4h1m0p"},"rule":"occupancy_lights_on","action":{"type":"lighting.set_zone","zone":"left","params":{"brightness":80,"fade_ms":400}},"outcome":"issued","summary":"Left zone became occupied and ambient light is 140 lux, below the 300 lux target.","commands":[{"cmd_id":"c00a41f2e","type":"set_zone_light","status":"pending"}],"request_id":null,"reply_text":null}}
+
+                    : keepalive
+        "400":
+          description: Unknown topic.
+          content:
+            application/json:
+              schema: { $ref: "./schemas/ErrorResponse.json" }
+              examples:
+                unknownTopic:
+                  summary: Topic not in the enum
+                  value: {"ok": false, "error": {"code": "invalid_input", "message": "topics contains an unknown topic sensor.noise.", "detail": {"field": "topics", "reason": "invalid_enum"}}}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        default: { $ref: "#/components/responses/Unexpected" }
+
+components:
+  securitySchemes:
+    roomKey:
+      type: apiKey
+      in: header
+      name: X-Room-Key
+      description: Shared room key, set when the Pi is provisioned and entered once in the app. Required on every call except GET /health.
+
+  parameters:
+    LectureId:
+      name: id
+      in: path
+      required: true
+      description: Lecture id.
+      schema: { $ref: "./schemas/common.json#/$defs/LectureId" }
+      example: lec_7f3k2m9q1x
+
+  responses:
+    Unauthorized:
+      description: Missing or wrong X-Room-Key.
+      content:
+        application/json:
+          schema: { $ref: "./schemas/ErrorResponse.json" }
+          examples:
+            missingKey:
+              summary: Header absent
+              value: {"ok": false, "error": {"code": "unauthorized", "message": "X-Room-Key header is missing or wrong.", "detail": {}}}
+    LectureNotFound:
+      description: Unknown lecture.
+      content:
+        application/json:
+          schema: { $ref: "./schemas/ErrorResponse.json" }
+          examples:
+            unknownLecture:
+              summary: No such id
+              value: {"ok": false, "error": {"code": "not_found", "message": "Lecture lec_0000000000 was not found.", "detail": {"resource": "lecture", "id": "lec_0000000000"}}}
+    DeviceUnavailable:
+      description: The ESP32 link is down or the device rejected the command.
+      content:
+        application/json:
+          schema: { $ref: "./schemas/ErrorResponse.json" }
+          examples:
+            linkDown:
+              summary: No frame from the ESP32 for 15 seconds
+              value: {"ok": false, "error": {"code": "device_unavailable", "message": "The room controller is offline.", "detail": {"device": "esp32-a1b2c3", "reason": "link_down", "last_seen_at": "2026-10-13T09:01:12.400Z"}}}
+            rejected:
+              summary: Device refused the command
+              value: {"ok": false, "error": {"code": "device_unavailable", "message": "The room controller rejected the command.", "detail": {"device": "esp32-a1b2c3", "reason": "hardware_fault", "cmd_id": "c00a41f30"}}}
+    DeviceTimeout:
+      description: The ESP32 did not acknowledge after 3 attempts. The state returned by a later GET shows confirmed false.
+      content:
+        application/json:
+          schema: { $ref: "./schemas/ErrorResponse.json" }
+          examples:
+            noAck:
+              summary: Three attempts without ack
+              value: {"ok": false, "error": {"code": "device_timeout", "message": "The room controller did not acknowledge the command.", "detail": {"device": "esp32-a1b2c3", "cmd_id": "c00a41f2e", "attempts": 3}}}
+    Unexpected:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema: { $ref: "./schemas/ErrorResponse.json" }
+          examples:
+            internal:
+              summary: Unhandled exception
+              value: {"ok": false, "error": {"code": "internal", "message": "Unexpected server error.", "detail": {}}}
+
+  examples:
+    LectureScheduled:
+      summary: Scheduled lecture
+      value: {"ok": true, "data": {"id": "lec_7f3k2m9q1x", "title": "Distributed Systems, week 7", "course_code": "CS301", "lecturer": "Dr. Karimova", "starts_at": "2026-10-13T09:00:00.000Z", "ends_at": "2026-10-13T10:30:00.000Z", "status": "scheduled", "lighting_mode": "presentation", "notes": "Guest talk in the second half.", "created_at": "2026-10-10T14:02:11.000Z", "updated_at": "2026-10-10T14:02:11.000Z"}}
+    LightingAuto:
+      summary: Auto mode, left zone occupied
+      value: {"ok": true, "data": {"mode": "auto", "zones": [
+        {"zone": "left", "brightness": 80, "confirmed": true, "updated_at": "2026-10-13T08:55:02.251Z"},
+        {"zone": "center", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z"},
+        {"zone": "right", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z"},
+        {"zone": "professor", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z"}],
+        "ambient_lux": 140, "updated_at": "2026-10-13T08:55:02.251Z"}}
+    LightingLecture:
+      summary: Lecture preset applied
+      value: {"ok": true, "data": {"mode": "lecture", "zones": [
+        {"zone": "left", "brightness": 80, "confirmed": true, "updated_at": "2026-10-13T09:00:01.120Z"},
+        {"zone": "center", "brightness": 80, "confirmed": true, "updated_at": "2026-10-13T09:00:01.120Z"},
+        {"zone": "right", "brightness": 80, "confirmed": true, "updated_at": "2026-10-13T09:00:01.120Z"},
+        {"zone": "professor", "brightness": 100, "confirmed": true, "updated_at": "2026-10-13T09:00:01.120Z"}],
+        "ambient_lux": 150, "updated_at": "2026-10-13T09:00:01.120Z"}}
+    LightingManual:
+      summary: Professor zone set by hand
+      value: {"ok": true, "data": {"mode": "manual", "zones": [
+        {"zone": "left", "brightness": 80, "confirmed": true, "updated_at": "2026-10-13T09:00:01.120Z"},
+        {"zone": "center", "brightness": 80, "confirmed": true, "updated_at": "2026-10-13T09:00:01.120Z"},
+        {"zone": "right", "brightness": 80, "confirmed": true, "updated_at": "2026-10-13T09:00:01.120Z"},
+        {"zone": "professor", "brightness": 100, "confirmed": true, "updated_at": "2026-10-13T09:05:00.060Z"}],
+        "ambient_lux": 150, "updated_at": "2026-10-13T09:05:00.060Z"}}
+    ClimateAuto:
+      summary: Warm room, fan running
+      value: {"ok": true, "data": {"mode": "auto", "temperature_c": 24.6, "humidity_pct": 44, "target_c": 22.5, "fan_speed": 60, "fan_confirmed": true, "updated_at": "2026-10-13T09:20:04.000Z"}}
+    SettingsDefault:
+      summary: Settings of room B-204
+      value: {"ok": true, "data": {"room_id": "b-204", "room_name": "Lecture Hall B-204", "timezone": "Asia/Tashkent",
+        "lighting": {"target_lux": 300, "vacancy_timeout_s": 300, "vacant_brightness": 20, "daylight_harvesting": true, "presets": {
+          "lecture": {"left": 80, "center": 80, "right": 80, "professor": 100},
+          "presentation": {"left": 30, "center": 20, "right": 30, "professor": 60}}},
+        "climate": {"default_target_c": 22.5, "hysteresis_c": 0.5},
+        "voice": {"enabled": true, "wake_word": "hey_room", "language": "en-US", "min_confidence": 0.6},
+        "announcements": {"volume": 70},
+        "updated_at": "2026-10-12T16:40:00.000Z"}}
+    SystemStateOk:
+      summary: Room occupied, everything up
+      value: {"ok": true, "data": {"ts": "2026-10-13T08:55:02.420Z", "status": "ok", "contract_version": "1.0.0",
+        "devices": {"esp32": "ok", "camera": "ok", "microphone": "ok", "speaker": "ok"},
+        "environment": {"ts": "2026-10-13T08:55:01.512Z", "device_id": "esp32-a1b2c3", "temperature_c": 23.4, "humidity_pct": 41, "lux": 140},
+        "occupancy": {"ts": "2026-10-13T08:55:02.140Z", "total": 1, "occupied": true, "zones": [
+          {"zone": "left", "count": 1, "occupied": true, "confidence": 0.9},
+          {"zone": "center", "count": 0, "occupied": false, "confidence": 0.95},
+          {"zone": "right", "count": 0, "occupied": false, "confidence": 0.96},
+          {"zone": "professor", "count": 0, "occupied": false, "confidence": 0.97}],
+          "source": "vision", "confidence": 0.9, "stale": false, "frame_id": 18342},
+        "lighting": {"mode": "auto", "zones": [
+          {"zone": "left", "brightness": 80, "confirmed": true, "updated_at": "2026-10-13T08:55:02.251Z"},
+          {"zone": "center", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z"},
+          {"zone": "right", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z"},
+          {"zone": "professor", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z"}],
+          "ambient_lux": 140, "updated_at": "2026-10-13T08:55:02.251Z"},
+        "climate": {"mode": "auto", "temperature_c": 23.4, "humidity_pct": 41, "target_c": 22.5, "fan_speed": 30, "fan_confirmed": true, "updated_at": "2026-10-13T08:50:00.000Z"},
+        "presentation": {"active": false, "started_at": null, "started_by": null, "lecture_id": null},
+        "lecture": {"at": "2026-10-13T08:55:02.420Z", "current": null,
+          "next": {"id": "lec_7f3k2m9q1x", "title": "Distributed Systems, week 7", "course_code": "CS301", "lecturer": "Dr. Karimova", "starts_at": "2026-10-13T09:00:00.000Z", "ends_at": "2026-10-13T10:30:00.000Z", "status": "scheduled", "lighting_mode": "presentation", "notes": "Guest talk in the second half.", "created_at": "2026-10-10T14:02:11.000Z", "updated_at": "2026-10-10T14:02:11.000Z"}}}}

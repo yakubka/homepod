@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BusEnvelope",
+  "description": "Wrapper of every event bus message and of every Server-Sent Event on GET /events. The topic fixes the payload schema and the only allowed publisher, enforced by the allOf rules below and listed in bus.md.",
+  "type": "object",
+  "required": ["id", "topic", "ts", "source", "contract_version", "correlation_id", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^evt_[a-z0-9]{6,32}$", "description": "Unique message id. Consumers drop duplicates by id." },
+    "topic": { "$ref": "common.json#/$defs/BusTopic", "description": "Logical topic." },
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Publish time on the Pi clock, ISO 8601 UTC." },
+    "source": { "$ref": "common.json#/$defs/Component", "description": "Publishing component." },
+    "contract_version": { "$ref": "common.json#/$defs/SemVer", "description": "Contract version of the publisher." },
+    "correlation_id": {
+      "type": ["string", "null"],
+      "pattern": "^(req|dec)_[a-z0-9]{6,32}$",
+      "description": "Chain id. The request_id for anything caused by a voice or app request, otherwise the decision id from decision.action onward, null for raw sensor and perception events."
+    },
+    "payload": { "type": "object", "description": "Topic payload, schema given by the topic." }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "topic": { "const": "sensor.environment" } } },
+      "then": { "properties": { "source": { "const": "bridge" }, "payload": { "$ref": "EnvironmentReading.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "sensor.presence" } } },
+      "then": { "properties": { "source": { "const": "bridge" }, "payload": { "$ref": "PresenceReading.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "perception.occupancy" } } },
+      "then": { "properties": { "source": { "const": "vision" }, "payload": { "$ref": "OccupancySnapshot.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "voice.wake" } } },
+      "then": { "properties": { "source": { "const": "voice" }, "payload": { "$ref": "VoiceWake.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "voice.transcript" } } },
+      "then": { "properties": { "source": { "enum": ["voice", "api"] }, "payload": { "$ref": "VoiceTranscript.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "voice.intent" } } },
+      "then": { "properties": { "source": { "const": "voice" }, "payload": { "$ref": "VoiceCommand.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "control.request" } } },
+      "then": { "properties": { "source": { "const": "api" }, "payload": { "$ref": "ControlRequest.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "decision.action" } } },
+      "then": { "properties": { "source": { "const": "engine" }, "payload": { "$ref": "Decision.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "device.command" } } },
+      "then": { "properties": { "source": { "const": "engine" }, "payload": { "$ref": "DeviceCommand.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "device.ack" } } },
+      "then": { "properties": { "source": { "const": "bridge" }, "payload": { "$ref": "DeviceAck.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "device.status" } } },
+      "then": { "properties": { "source": { "const": "bridge" }, "payload": { "$ref": "DeviceLink.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "system.heartbeat" } } },
+      "then": { "properties": { "payload": { "$ref": "Heartbeat.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "schedule.lecture" } } },
+      "then": { "properties": { "source": { "const": "api" }, "payload": { "$ref": "LectureEvent.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "settings.changed" } } },
+      "then": { "properties": { "source": { "const": "api" }, "payload": { "$ref": "Settings.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "system.degraded" } } },
+      "then": { "properties": { "source": { "const": "core" }, "payload": { "$ref": "Degraded.json" } } }
+    },
+    {
+      "if": { "properties": { "topic": { "const": "system.state" } } },
+      "then": { "properties": { "source": { "const": "engine" }, "payload": { "$ref": "SystemState.json" } } }
+    }
+  ],
+  "examples": [
+    {
+      "id": "evt_9k2j4h1m0p",
+      "topic": "perception.occupancy",
+      "ts": "2026-10-13T08:55:02.180Z",
+      "source": "vision",
+      "contract_version": "1.0.0",
+      "correlation_id": null,
+      "payload": {
+        "ts": "2026-10-13T08:55:02.140Z",
+        "total": 1,
+        "occupied": true,
+        "zones": [
+          { "zone": "left", "count": 1, "occupied": true, "confidence": 0.9 },
+          { "zone": "center", "count": 0, "occupied": false, "confidence": 0.95 },
+          { "zone": "right", "count": 0, "occupied": false, "confidence": 0.96 },
+          { "zone": "professor", "count": 0, "occupied": false, "confidence": 0.97 }
+        ],
+        "source": "vision",
+        "confidence": 0.9,
+        "stale": false,
+        "frame_id": 18342
+      }
+    },
+    {
+      "id": "evt_5f8g2h6j3k",
+      "topic": "device.ack",
+      "ts": "2026-10-13T08:55:02.262Z",
+      "source": "bridge",
+      "contract_version": "1.0.0",
+      "correlation_id": "dec_01h9x4k2pq",
+      "payload": {
+        "type": "ack",
+        "seq": 813,
+        "ts": "2026-10-13T08:55:02.251Z",
+        "cmd_id": "c00a41f2e",
+        "status": "applied",
+        "reason": null,
+        "state": { "lights": { "left": 80, "center": 0, "right": 0, "professor": 0 }, "fan": 0, "ring": "idle" }
+      }
+    }
+  ]
+}

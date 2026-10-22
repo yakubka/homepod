@@ -1,0 +1,9 @@
+jsonschema==4.26.0
+referencing==0.37.0
+rfc3339-validator==0.1.4
+PyYAML==6.0.3
+openapi-spec-validator==0.9.0
+datamodel-code-generator==0.86.0
+black==26.10.1
+isort==8.0.1
+pydantic==2.14.1

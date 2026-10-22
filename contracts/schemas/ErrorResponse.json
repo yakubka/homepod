@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ErrorResponse",
+  "description": "The only failure shape in the contract. Every non-2xx HTTP response body is an ErrorResponse. No endpoint defines its own error shape.",
+  "type": "object",
+  "required": ["ok", "error"],
+  "additionalProperties": false,
+  "properties": {
+    "ok": { "type": "boolean", "const": false, "description": "Always false on failure." },
+    "error": { "$ref": "#/$defs/ApiError", "description": "What went wrong." }
+  },
+  "$defs": {
+    "ErrorCode": {
+      "title": "ErrorCode",
+      "description": "Fixed set of failure codes. HTTP status per code: invalid_input 400, unauthorized 401, not_found 404, conflict 409, internal 500, device_unavailable 503, degraded 503, device_timeout 504. Clients branch on the code, never on the message.",
+      "type": "string",
+      "enum": [
+        "invalid_input",
+        "unauthorized",
+        "not_found",
+        "conflict",
+        "device_unavailable",
+        "device_timeout",
+        "degraded",
+        "internal"
+      ]
+    },
+    "ApiError": {
+      "title": "ApiError",
+      "description": "Failure details.",
+      "type": "object",
+      "required": ["code", "message", "detail"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "$ref": "#/$defs/ErrorCode", "description": "Machine readable failure code." },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "One English sentence for logs and toasts. Never parsed by clients."
+        },
+        "detail": {
+          "type": "object",
+          "description": "Machine readable context, an empty object when there is none. Conventional keys: invalid_input uses field and reason, not_found uses resource and id, conflict uses resource and conflicting_id, device_unavailable uses device, reason and last_seen_at, device_timeout uses device, cmd_id and attempts, degraded uses components."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "ok": false,
+      "error": {
+        "code": "invalid_input",
+        "message": "brightness must be an integer between 0 and 100.",
+        "detail": { "field": "brightness", "reason": "out_of_range" }
+      }
+    },
+    {
+      "ok": false,
+      "error": {
+        "code": "device_timeout",
+        "message": "The lighting controller did not acknowledge the command.",
+        "detail": { "device": "esp32-a1b2c3", "cmd_id": "c00a41f2e", "attempts": 3 }
+      }
+    },
+    {
+      "ok": false,
+      "error": { "code": "internal", "message": "Unexpected server error.", "detail": {} }
+    }
+  ]
+}

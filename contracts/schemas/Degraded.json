@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Degraded",
+  "description": "A runtime budget breach, published by the core runtime guard on system.degraded. Services react by switching to their fallback, for example vision lowering its frame rate or voice answering without the optional language model. The guard publishes at most one event per reason and model every guard.cooldown seconds.",
+  "type": "object",
+  "required": ["ts", "reason", "model_id", "measured", "limit", "unit", "action", "evicted"],
+  "additionalProperties": false,
+  "properties": {
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Detection time, ISO 8601 UTC." },
+    "reason": { "$ref": "#/$defs/DegradedReason", "description": "Which budget was breached." },
+    "model_id": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z][a-z0-9_]{1,31}$",
+      "description": "Model id from services/core/models.py for slow_inference, null for memory_ceiling."
+    },
+    "measured": { "type": "number", "minimum": 0, "description": "Measured value, in unit, one decimal place." },
+    "limit": { "type": "number", "minimum": 0, "description": "The limit that was crossed, in unit, one decimal place." },
+    "unit": { "$ref": "#/$defs/DegradedUnit", "description": "Unit of measured and limit." },
+    "action": { "$ref": "#/$defs/DegradedAction", "description": "What core already did." },
+    "evicted": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$" },
+      "description": "Model ids evicted to recover memory, empty when none."
+    }
+  },
+  "$defs": {
+    "DegradedReason": {
+      "title": "DegradedReason",
+      "description": "memory_ceiling means process resident memory passed models.memory_ceiling_mb, slow_inference means one inference took longer than guard.p95_factor times the declared p95 of its model.",
+      "type": "string",
+      "enum": ["memory_ceiling", "slow_inference"]
+    },
+    "DegradedUnit": {
+      "title": "DegradedUnit",
+      "description": "mb is mebibytes of resident memory, ms is milliseconds.",
+      "type": "string",
+      "enum": ["mb", "ms"]
+    },
+    "DegradedAction": {
+      "title": "DegradedAction",
+      "description": "evicted means idle on-demand models were unloaded, fallback means services are expected to switch to their fallback.",
+      "type": "string",
+      "enum": ["evicted", "fallback"]
+    }
+  },
+  "examples": [
+    {
+      "ts": "2026-10-20T09:14:02.310Z",
+      "reason": "slow_inference",
+      "model_id": "stt",
+      "measured": 4870.2,
+      "limit": 4500.0,
+      "unit": "ms",
+      "action": "fallback",
+      "evicted": []
+    },
+    {
+      "ts": "2026-10-20T09:20:40.000Z",
+      "reason": "memory_ceiling",
+      "model_id": null,
+      "measured": 1236.4,
+      "limit": 1200.0,
+      "unit": "mb",
+      "action": "evicted",
+      "evicted": ["tts", "detector"]
+    }
+  ]
+}
