@@ -87,7 +87,7 @@ class WavFileSource(AudioSource):
         except (wave.Error, EOFError) as exc:
             # The stdlib wave module only reads integer PCM; float or
             # compressed WAVs land here.
-            raise ValueError(f"{self._path}: not a readable PCM WAV file ({exc})") from exc
+            raise ValueError(f"WAV source: not a readable PCM WAV file ({exc})") from exc      # no file name: it may carry a person's name or words
 
         problems = []
         if wav.getnchannels() != settings.CHANNELS:
@@ -98,7 +98,7 @@ class WavFileSource(AudioSource):
             problems.append(f"{wav.getframerate()} Hz (need {settings.TARGET_SAMPLE_RATE} Hz)")
         if problems:
             wav.close()
-            raise ValueError(f"{self._path}: unsupported WAV format: " + ", ".join(problems))
+            raise ValueError("WAV source: unsupported WAV format: " + ", ".join(problems))
         return wav
 
     # -- AudioSource interface ----------------------------------------
@@ -120,9 +120,10 @@ class WavFileSource(AudioSource):
         self._samples_delivered = 0
         self._eof = False
         self._start_clock = self._clock()
+        # PRIVACY: never log the file name or path (a recording's name can carry a speaker's name or the words spoken).
         logger.info(
-            "event=wav_source_start path=%s total_samples=%d duration_s=%.3f realtime=%s block_size=%d",
-            self._path.name, self._total_samples, self.duration_s, self._realtime, self._block_size,
+            "event=wav_source_start source=wav_file sample_rate=%d channels=%d total_samples=%d duration_s=%.3f realtime=%s block_size=%d",
+            self._sample_rate, settings.CHANNELS, self._total_samples, self.duration_s, self._realtime, self._block_size,
         )
 
     def stop(self) -> None:
@@ -143,13 +144,13 @@ class WavFileSource(AudioSource):
         if self._wav is None:
             raise RuntimeError("WavFileSource.read_frame() called before start()")
         if self._eof:
-            raise EndOfAudio(f"end of {self._path.name}")
+            raise EndOfAudio("end of WAV source")
 
         raw = self._wav.readframes(self._block_size)
         if not raw:
             self._eof = True
             logger.info("event=wav_source_eof samples_delivered=%d", self._samples_delivered)
-            raise EndOfAudio(f"end of {self._path.name}")
+            raise EndOfAudio("end of WAV source")
 
         # WAV data is little-endian; astype() also gives a writable copy
         # (frombuffer on bytes is read-only).

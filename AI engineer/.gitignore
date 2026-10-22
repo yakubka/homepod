@@ -1,22 +1,81 @@
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Python environment, bytecode and test caches
+.venv/
+venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.venv/
-venv/
 
-models/*
+# Wake-word model files are downloaded per machine (see WEEK2_REPORT.md), never committed
+*.onnx
+*.tflite
 
-*.wav
-*.mp3
-*.flac
-
-_trial_temp/
+# Local tooling / agent state (machine- and user-specific)
+.claude/
+.cmem-projects/
 agent-transcripts/
 graphify-out/
+_trial_temp/
+# personal Claude Code instructions of the AI Engineer: local-only, never part of a team upload (2026-10-18)
+/CLAUDE.md
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+
+# Task Observer (auto-generated, session-specific — see CLAUDE.md)
 skill-observations/
 skill-updates/
 
-.env
-*.log
+# --- VESTA evaluation corpus: human voice recordings are PERSONAL DATA (WP2.4) ---
+# The corpus lives OUTSIDE this repository (see docs/wp2_4_evaluation_protocol.md).
+# These rules are a second line of defence in case audio ends up in the tree.
+# NOTE: .gitignore only stops accidental "git add"; it does not stop "git add -f",
+# cloud sync or backups. Keep recordings out of the repository folder entirely.
+*.wav
+*.flac
+*.mp3
+*.m4a
+*.aac
+*.ogg
+*.opus
+*.aiff
+*.aif
+*.wma
+*.amr
+# Corpus-related directories and files
+wakeword_corpus/
+VESTA-data/
+consent/
+private/
+speaker_key*
+# Only tiny SYNTHETIC test clips may ever be committed, and only here:
+!tests/fixtures/synthetic/*.wav
 
-!models/README.md
+# Local vision test assets (may contain people): never commit
+vision_assets/
+
+# STT model snapshot (Team Leader AI-2): fetched once by an explicit step, never committed
+models/faster-whisper-*/
+
+# TTS voice package (ACADEMIC / NON-COMMERCIAL development asset, Team Leader spoken output): fetched once by an explicit step, never committed
+models/vits-piper-*/
+
+# Week 7 voice-evaluation evidence and REAL manifests: reference transcripts, consent markers and device details of real people.
+# They belong OUTSIDE the repository (evaluation/week7_voice_eval.py refuses to read or write them here); this is a second line of defence.
+# The versioned TEMPLATE below is the only Week 7 manifest that may be committed.
+week7_eval_items.jsonl
+week7_eval_items.jsonl.partial
+week7_eval_report.json
+week7_eval_report.json.partial
+week7_eval_report.INCOMPLETE.json
+week7_calibration_sweep.json
+*week7*manifest*.json
+!evaluation/week7_corpus_manifest.template.json
