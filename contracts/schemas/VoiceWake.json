@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VoiceWake",
+  "description": "Wake word detected by the voice stack, published on voice.wake. Opens a request and assigns the request_id that follows it to the reply.",
+  "type": "object",
+  "required": ["request_id", "ts", "wake_word", "confidence"],
+  "additionalProperties": false,
+  "properties": {
+    "request_id": { "$ref": "common.json#/$defs/RequestId", "description": "New correlation id for this request." },
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Detection time, ISO 8601 UTC." },
+    "wake_word": { "type": "string", "minLength": 2, "maxLength": 32, "description": "Wake word model that fired." },
+    "confidence": { "$ref": "common.json#/$defs/Confidence", "description": "Detector score, 0.0 to 1.0." }
+  },
+  "examples": [
+    { "request_id": "req_8d1f6g3h2j", "ts": "2026-10-13T09:30:10.004Z", "wake_word": "hey_room", "confidence": 0.88 }
+  ]
+}

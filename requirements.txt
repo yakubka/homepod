@@ -1,4 +1,12 @@
 PyYAML>=6.0
+jsonschema>=4.18
+pydantic>=2.6
+psutil>=5.9
+onnxruntime>=1.20
+faster-whisper==1.2.1
+sherpa-onnx==1.13.8
+huggingface-hub>=0.23
+-e ./contracts/generated/python
 numpy>=1.24.0
 opencv-python>=4.8.0
 Pillow>=9.0.0

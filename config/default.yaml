@@ -1,0 +1,24 @@
+# Deployment defaults, committed. Every key is optional and overrides the
+# DEFAULTS in services/core/config.py. Put machine specific values in
+# config/local.yaml, which is gitignored, or in VESTA_* environment variables.
+
+log:
+  format: json
+
+bus:
+  queue_size: 256
+
+heartbeat:
+  interval: 5.0
+
+shutdown:
+  timeout: 10.0
+
+state:
+  stale:
+    environment: 10.0
+    presence: 10.0
+    occupancy: 5.0
+    device: 15.0
+    system: 15.0
+    heartbeat: 15.0

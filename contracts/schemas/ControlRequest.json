@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ControlRequest",
+  "description": "A state change requested through the HTTP API, published by the API on control.request. The engine answers with a decision.action carrying the same request_id. The API fills every default, for example fade_ms and volume, before publishing.",
+  "type": "object",
+  "required": ["request_id", "ts", "action"],
+  "additionalProperties": false,
+  "properties": {
+    "request_id": { "$ref": "common.json#/$defs/RequestId", "description": "Correlation id created by the API for this HTTP request." },
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Receipt time of the HTTP request, ISO 8601 UTC." },
+    "action": { "$ref": "common.json#/$defs/Action", "description": "Requested change." }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "action": { "properties": { "type": { "const": "lighting.set_mode" } } } } },
+      "then": { "properties": { "action": { "properties": { "params": { "$ref": "common.json#/$defs/ActionParams", "required": ["mode", "fade_ms"] } } } } }
+    },
+    {
+      "if": { "properties": { "action": { "properties": { "type": { "const": "lighting.set_zone" } } } } },
+      "then": { "properties": { "action": { "properties": { "params": { "$ref": "common.json#/$defs/ActionParams", "required": ["brightness", "fade_ms"] } } } } }
+    },
+    {
+      "if": { "properties": { "action": { "properties": { "type": { "const": "climate.set_target" } } } } },
+      "then": { "properties": { "action": { "properties": { "params": { "$ref": "common.json#/$defs/ActionParams", "required": ["target_c"] } } } } }
+    },
+    {
+      "if": { "properties": { "action": { "properties": { "type": { "const": "announcement.play" } } } } },
+      "then": { "properties": { "action": { "properties": { "params": { "$ref": "common.json#/$defs/ActionParams", "required": ["announcement_id", "volume"] } } } } }
+    },
+    {
+      "if": { "properties": { "action": { "properties": { "type": { "enum": ["climate.set_fan", "ring.set", "answer", "none"] } } } } },
+      "then": false
+    }
+  ],
+  "examples": [
+    {
+      "request_id": "req_3q7w1e5r9t",
+      "ts": "2026-10-13T09:05:00.010Z",
+      "action": { "type": "lighting.set_zone", "zone": "professor", "params": { "brightness": 100, "fade_ms": 400 } }
+    },
+    {
+      "request_id": "req_6y2u8i4o0p",
+      "ts": "2026-10-13T10:15:00.020Z",
+      "action": { "type": "announcement.play", "zone": null, "params": { "announcement_id": "ann_break10", "volume": 70 } }
+    }
+  ]
+}

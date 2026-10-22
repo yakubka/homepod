@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AnnouncementPlayback",
+  "description": "A started announcement playback, returned by POST /announcements/{id}/play. Only one playback runs at a time.",
+  "type": "object",
+  "required": ["playback_id", "announcement_id", "decision_id", "started_at", "expected_end_at", "volume"],
+  "additionalProperties": false,
+  "properties": {
+    "playback_id": { "type": "string", "pattern": "^pb_[a-z0-9]{6,32}$", "description": "Playback identifier." },
+    "announcement_id": { "$ref": "common.json#/$defs/AnnouncementId", "description": "Announcement being played." },
+    "decision_id": { "$ref": "common.json#/$defs/DecisionId", "description": "Engine decision that started the playback." },
+    "started_at": { "$ref": "common.json#/$defs/Timestamp", "description": "Playback start, ISO 8601 UTC." },
+    "expected_end_at": { "$ref": "common.json#/$defs/Timestamp", "description": "started_at plus the announcement duration, ISO 8601 UTC." },
+    "volume": { "$ref": "common.json#/$defs/Volume", "description": "Effective volume, percent 0 to 100." }
+  },
+  "examples": [
+    {
+      "playback_id": "pb_4m8n2b6v1c",
+      "announcement_id": "ann_break10",
+      "decision_id": "dec_01h9xa3r5w",
+      "started_at": "2026-10-13T10:15:00.120Z",
+      "expected_end_at": "2026-10-13T10:15:06.120Z",
+      "volume": 70
+    }
+  ]
+}

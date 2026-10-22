@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SystemState",
+  "description": "Everything the app needs for its home screen in one object. Published by the engine on system.state, retained, and returned by GET /state.",
+  "type": "object",
+  "required": ["ts", "status", "contract_version", "devices", "environment", "occupancy", "lighting", "climate", "presentation", "lecture"],
+  "additionalProperties": false,
+  "properties": {
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Snapshot time, ISO 8601 UTC." },
+    "status": { "$ref": "common.json#/$defs/ComponentStatus", "description": "Overall status, degraded when any device is not ok." },
+    "contract_version": { "$ref": "common.json#/$defs/SemVer", "description": "Contract version of the publisher." },
+    "devices": { "$ref": "#/$defs/DeviceStatuses", "description": "Per-device status." },
+    "environment": {
+      "description": "Latest environment reading, null before the first report.",
+      "anyOf": [{ "$ref": "EnvironmentReading.json" }, { "type": "null" }]
+    },
+    "occupancy": {
+      "description": "Latest fused occupancy, null before the first estimate.",
+      "anyOf": [{ "$ref": "OccupancySnapshot.json" }, { "type": "null" }]
+    },
+    "lighting": { "$ref": "LightingState.json", "description": "Lighting state." },
+    "climate": { "$ref": "ClimateState.json", "description": "Climate state." },
+    "presentation": { "$ref": "PresentationState.json", "description": "Presentation state." },
+    "lecture": { "$ref": "CurrentLecture.json", "description": "Current and next lecture." }
+  },
+  "$defs": {
+    "DeviceStatuses": {
+      "title": "DeviceStatuses",
+      "description": "Status of the physical devices.",
+      "type": "object",
+      "required": ["esp32", "camera", "microphone", "speaker"],
+      "additionalProperties": false,
+      "properties": {
+        "esp32": { "$ref": "common.json#/$defs/ComponentStatus", "description": "Microcontroller link." },
+        "camera": { "$ref": "common.json#/$defs/ComponentStatus", "description": "Vision camera." },
+        "microphone": { "$ref": "common.json#/$defs/ComponentStatus", "description": "Voice microphone." },
+        "speaker": { "$ref": "common.json#/$defs/ComponentStatus", "description": "Room speaker." }
+      }
+    }
+  },
+  "examples": [
+    {
+      "ts": "2026-10-13T08:55:02.420Z",
+      "status": "ok",
+      "contract_version": "1.0.0",
+      "devices": { "esp32": "ok", "camera": "ok", "microphone": "ok", "speaker": "ok" },
+      "environment": { "ts": "2026-10-13T08:55:01.512Z", "device_id": "esp32-a1b2c3", "temperature_c": 23.4, "humidity_pct": 41, "lux": 140 },
+      "occupancy": {
+        "ts": "2026-10-13T08:55:02.140Z",
+        "total": 1,
+        "occupied": true,
+        "zones": [
+          { "zone": "left", "count": 1, "occupied": true, "confidence": 0.9 },
+          { "zone": "center", "count": 0, "occupied": false, "confidence": 0.95 },
+          { "zone": "right", "count": 0, "occupied": false, "confidence": 0.96 },
+          { "zone": "professor", "count": 0, "occupied": false, "confidence": 0.97 }
+        ],
+        "source": "vision",
+        "confidence": 0.9,
+        "stale": false,
+        "frame_id": 18342
+      },
+      "lighting": {
+        "mode": "auto",
+        "zones": [
+          { "zone": "left", "brightness": 80, "confirmed": true, "updated_at": "2026-10-13T08:55:02.251Z" },
+          { "zone": "center", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z" },
+          { "zone": "right", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z" },
+          { "zone": "professor", "brightness": 0, "confirmed": true, "updated_at": "2026-10-13T08:40:00.000Z" }
+        ],
+        "ambient_lux": 140,
+        "updated_at": "2026-10-13T08:55:02.251Z"
+      },
+      "climate": {
+        "mode": "auto",
+        "temperature_c": 23.4,
+        "humidity_pct": 41,
+        "target_c": 22.5,
+        "fan_speed": 30,
+        "fan_confirmed": true,
+        "updated_at": "2026-10-13T08:50:00.000Z"
+      },
+      "presentation": { "active": false, "started_at": null, "started_by": null, "lecture_id": null },
+      "lecture": { "at": "2026-10-13T08:55:02.420Z", "current": null, "next": null }
+    }
+  ]
+}

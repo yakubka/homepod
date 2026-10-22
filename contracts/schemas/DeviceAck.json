@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DeviceAck",
+  "description": "Acknowledgement of one downlink command. Sent by the ESP32 with status applied or rejected within 200 ms of receiving the line. The bridge republishes it unchanged on device.ack. The bridge also publishes synthetic acks, recognisable by the missing seq and a null state: status timeout with reason no_response when no ack arrived after the last retry, and status rejected with reason busy or link_down when the command never reached the wire. The device never sends timeout, link_down or no_response.",
+  "type": "object",
+  "required": ["type", "ts", "cmd_id", "status", "reason", "state"],
+  "additionalProperties": false,
+  "properties": {
+    "type": { "type": "string", "const": "ack", "description": "Message type." },
+    "seq": { "$ref": "DeviceCommand.json#/$defs/Seq", "description": "Uplink frame counter, present on every ack sent by the device, absent on a synthetic ack." },
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Device time when the ack was sent, or bridge time for a synthetic ack, ISO 8601 UTC." },
+    "cmd_id": { "$ref": "common.json#/$defs/CmdId", "description": "cmd_id of the acknowledged command, unchanged." },
+    "status": { "$ref": "#/$defs/AckStatus", "description": "Result." },
+    "reason": {
+      "description": "Why the command was not applied, null when status is applied.",
+      "anyOf": [{ "$ref": "#/$defs/AckReason" }, { "type": "null" }]
+    },
+    "state": {
+      "description": "Actuator state after handling the command, null on a synthetic ack.",
+      "anyOf": [{ "$ref": "#/$defs/ActuatorState" }, { "type": "null" }]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "applied" } } },
+      "then": { "required": ["seq"], "properties": { "reason": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "rejected" } } },
+      "then": { "properties": { "reason": { "type": "string" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "timeout" } } },
+      "then": { "not": { "required": ["seq"] }, "properties": { "reason": { "const": "no_response" } } }
+    },
+    {
+      "if": { "required": ["seq"] },
+      "then": { "properties": { "state": { "type": "object" }, "reason": { "not": { "enum": ["no_response", "link_down"] } } } },
+      "else": { "properties": { "state": { "type": "null" }, "reason": { "enum": ["no_response", "link_down", "busy"] } } }
+    }
+  ],
+  "$defs": {
+    "AckStatus": {
+      "title": "AckStatus",
+      "description": "applied means the command was accepted and is being executed, a fade may still be running. rejected means it was not executed, see reason. timeout is synthetic, produced by the bridge only.",
+      "type": "string",
+      "enum": ["applied", "rejected", "timeout"]
+    },
+    "AckReason": {
+      "title": "AckReason",
+      "description": "invalid_field means a field is missing or has the wrong type, out_of_range means a value is outside its range, unknown_type means the message type is not known, unsupported means the hardware is not fitted, busy means the device or bridge queue is full, hardware_fault means the actuator failed. no_response and link_down are bridge only, for a command that timed out and for one that could not be sent because the link is down.",
+      "type": "string",
+      "enum": ["invalid_field", "out_of_range", "unknown_type", "unsupported", "busy", "hardware_fault", "no_response", "link_down"]
+    },
+    "ActuatorState": {
+      "title": "ActuatorState",
+      "description": "Actuator targets held by the device.",
+      "type": "object",
+      "required": ["lights", "fan", "ring"],
+      "additionalProperties": false,
+      "properties": {
+        "lights": { "$ref": "common.json#/$defs/ZoneLevels", "description": "Target brightness per zone, percent 0 to 100." },
+        "fan": { "$ref": "common.json#/$defs/FanSpeed", "description": "Fan speed, percent 0 to 100." },
+        "ring": { "$ref": "common.json#/$defs/RingPattern", "description": "Current ring pattern." }
+      }
+    }
+  },
+  "examples": [
+    {
+      "type": "ack",
+      "seq": 813,
+      "ts": "2026-10-13T08:55:02.251Z",
+      "cmd_id": "c00a41f2e",
+      "status": "applied",
+      "reason": null,
+      "state": { "lights": { "left": 80, "center": 0, "right": 0, "professor": 0 }, "fan": 0, "ring": "idle" }
+    },
+    {
+      "type": "ack",
+      "seq": 902,
+      "ts": "2026-10-13T09:31:00.040Z",
+      "cmd_id": "c00a41f30",
+      "status": "rejected",
+      "reason": "hardware_fault",
+      "state": { "lights": { "left": 80, "center": 80, "right": 80, "professor": 100 }, "fan": 0, "ring": "idle" }
+    },
+    {
+      "type": "ack",
+      "ts": "2026-10-13T08:55:03.740Z",
+      "cmd_id": "c00a41f2e",
+      "status": "timeout",
+      "reason": "no_response",
+      "state": null
+    },
+    {
+      "type": "ack",
+      "ts": "2026-10-13T09:01:30.002Z",
+      "cmd_id": "c00a41f40",
+      "status": "rejected",
+      "reason": "link_down",
+      "state": null
+    }
+  ]
+}

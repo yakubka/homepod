@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsPatch",
+  "description": "Request body of PATCH /settings. Deep merge semantics, only the keys present are changed, nested objects are merged key by key. room_id and updated_at are read-only and not accepted. The response is the full Settings after the merge.",
+  "type": "object",
+  "minProperties": 1,
+  "additionalProperties": false,
+  "properties": {
+    "room_name": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Display name, 1 to 60 characters." },
+    "timezone": { "type": "string", "pattern": "^[A-Za-z_]+(/[A-Za-z0-9_+-]+)*$", "description": "IANA time zone." },
+    "lighting": { "$ref": "#/$defs/LightingSettingsPatch", "description": "Lighting changes." },
+    "climate": { "$ref": "#/$defs/ClimateSettingsPatch", "description": "Climate changes." },
+    "voice": { "$ref": "#/$defs/VoiceSettingsPatch", "description": "Voice changes." },
+    "announcements": { "$ref": "#/$defs/AnnouncementSettingsPatch", "description": "Announcement changes." }
+  },
+  "$defs": {
+    "LightingSettingsPatch": {
+      "title": "LightingSettingsPatch",
+      "description": "Partial LightingSettings.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "target_lux": { "$ref": "common.json#/$defs/Lux", "description": "Lux." },
+        "vacancy_timeout_s": { "type": "integer", "minimum": 30, "maximum": 3600, "description": "Seconds, integer 30 to 3600." },
+        "vacant_brightness": { "$ref": "common.json#/$defs/Brightness", "description": "Percent 0 to 100." },
+        "daylight_harvesting": { "type": "boolean", "description": "Daylight harvesting on or off." },
+        "presets": { "$ref": "#/$defs/LightingPresetsPatch", "description": "Preset changes." }
+      }
+    },
+    "LightingPresetsPatch": {
+      "title": "LightingPresetsPatch",
+      "description": "Partial LightingPresets.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "lecture": { "$ref": "#/$defs/ZoneLevelsPatch", "description": "Lecture preset changes." },
+        "presentation": { "$ref": "#/$defs/ZoneLevelsPatch", "description": "Presentation preset changes." }
+      }
+    },
+    "ZoneLevelsPatch": {
+      "title": "ZoneLevelsPatch",
+      "description": "Partial ZoneLevels, percent 0 to 100 per zone.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "left": { "$ref": "common.json#/$defs/Brightness", "description": "Percent 0 to 100." },
+        "center": { "$ref": "common.json#/$defs/Brightness", "description": "Percent 0 to 100." },
+        "right": { "$ref": "common.json#/$defs/Brightness", "description": "Percent 0 to 100." },
+        "professor": { "$ref": "common.json#/$defs/Brightness", "description": "Percent 0 to 100." }
+      }
+    },
+    "ClimateSettingsPatch": {
+      "title": "ClimateSettingsPatch",
+      "description": "Partial ClimateSettings.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "default_target_c": { "$ref": "common.json#/$defs/TargetTemperatureC", "description": "Degrees Celsius, one decimal place, 16.0 to 30.0." },
+        "hysteresis_c": { "type": "number", "minimum": 0.1, "maximum": 3, "description": "Degrees Celsius, one decimal place, 0.1 to 3.0." }
+      }
+    },
+    "VoiceSettingsPatch": {
+      "title": "VoiceSettingsPatch",
+      "description": "Partial VoiceSettings.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Wake word on or off." },
+        "wake_word": { "type": "string", "minLength": 2, "maxLength": 32, "description": "Wake word model name." },
+        "language": { "type": "string", "pattern": "^[a-z]{2}(-[A-Z]{2})?$", "description": "BCP 47 tag." },
+        "min_confidence": { "$ref": "common.json#/$defs/Confidence", "description": "0.0 to 1.0." }
+      }
+    },
+    "AnnouncementSettingsPatch": {
+      "title": "AnnouncementSettingsPatch",
+      "description": "Partial AnnouncementSettings.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "volume": { "$ref": "common.json#/$defs/Volume", "description": "Percent 0 to 100." }
+      }
+    }
+  },
+  "examples": [
+    { "lighting": { "target_lux": 350, "presets": { "presentation": { "center": 10 } } } },
+    { "climate": { "default_target_c": 23.0 }, "announcements": { "volume": 60 } }
+  ]
+}

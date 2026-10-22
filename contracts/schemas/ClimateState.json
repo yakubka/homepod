@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClimateState",
+  "description": "Climate as known by the engine. The only actuator is the ESP32 fan. In auto mode the engine raises fan speed while temperature_c is above target_c plus the hysteresis from Settings and lowers it below target_c minus the hysteresis.",
+  "type": "object",
+  "required": ["mode", "temperature_c", "humidity_pct", "target_c", "fan_speed", "fan_confirmed", "updated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "mode": { "$ref": "common.json#/$defs/ClimateMode", "description": "Active climate mode." },
+    "temperature_c": {
+      "description": "Latest air temperature, degrees Celsius, one decimal place, null when unknown.",
+      "anyOf": [{ "$ref": "common.json#/$defs/TemperatureC" }, { "type": "null" }]
+    },
+    "humidity_pct": {
+      "description": "Latest relative humidity, percent, integer 0 to 100, null when unknown.",
+      "anyOf": [{ "$ref": "common.json#/$defs/HumidityPct" }, { "type": "null" }]
+    },
+    "target_c": { "$ref": "common.json#/$defs/TargetTemperatureC", "description": "Target temperature, degrees Celsius, one decimal place, 16.0 to 30.0." },
+    "fan_speed": { "$ref": "common.json#/$defs/FanSpeed", "description": "Commanded fan speed, percent 0 to 100." },
+    "fan_confirmed": { "type": "boolean", "description": "True when the device acknowledged fan_speed." },
+    "updated_at": { "$ref": "common.json#/$defs/Timestamp", "description": "Last change of any field, ISO 8601 UTC." }
+  },
+  "examples": [
+    {
+      "mode": "auto",
+      "temperature_c": 24.6,
+      "humidity_pct": 44,
+      "target_c": 22.5,
+      "fan_speed": 60,
+      "fan_confirmed": true,
+      "updated_at": "2026-10-13T09:20:04.000Z"
+    }
+  ]
+}

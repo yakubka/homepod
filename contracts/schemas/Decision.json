@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Decision",
+  "description": "One decision of the engine: what triggered it, which rule fired, what it did and why. Published on decision.action when made, with every command status pending. GET /decisions returns the same record with command statuses updated from device.ack. Every device.command is issued by exactly one decision.",
+  "type": "object",
+  "required": ["id", "ts", "trigger", "rule", "action", "outcome", "summary", "commands", "request_id", "reply_text"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "common.json#/$defs/DecisionId", "description": "Decision identifier." },
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Decision time, ISO 8601 UTC." },
+    "trigger": { "$ref": "#/$defs/DecisionTrigger", "description": "What caused the decision." },
+    "rule": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{2,63}$",
+      "description": "Identifier of the engine rule that fired, snake_case, for example occupancy_lights_on."
+    },
+    "action": { "$ref": "common.json#/$defs/Action", "description": "What the engine decided to do." },
+    "outcome": { "$ref": "#/$defs/DecisionOutcome", "description": "Result at decision time." },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "One English sentence explaining the decision, shown in the app."
+    },
+    "commands": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/DecisionCommand" },
+      "description": "Device commands issued for this decision, empty when none."
+    },
+    "request_id": {
+      "description": "Correlation id when the trigger was a voice or app request, otherwise null.",
+      "anyOf": [{ "$ref": "common.json#/$defs/RequestId" }, { "type": "null" }]
+    },
+    "reply_text": {
+      "type": ["string", "null"],
+      "maxLength": 300,
+      "description": "Text the voice stack speaks and the app shows as the answer, null when the trigger was not a request."
+    }
+  },
+  "$defs": {
+    "DecisionTriggerType": {
+      "title": "DecisionTriggerType",
+      "description": "Kind of trigger. presence, occupancy and environment come from sensor topics, voice from voice.intent, api from control.request, schedule from schedule.lecture, timer from an engine timer such as the vacancy timeout, device from device.ack or a reconnect.",
+      "type": "string",
+      "enum": ["presence", "occupancy", "environment", "voice", "api", "schedule", "timer", "device"]
+    },
+    "DecisionTrigger": {
+      "title": "DecisionTrigger",
+      "description": "Cause of a decision.",
+      "type": "object",
+      "required": ["type", "topic", "event_id"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "$ref": "#/$defs/DecisionTriggerType", "description": "Kind of trigger." },
+        "topic": {
+          "description": "Bus topic of the triggering event, null for timer triggers.",
+          "anyOf": [{ "$ref": "common.json#/$defs/BusTopic" }, { "type": "null" }]
+        },
+        "event_id": {
+          "type": ["string", "null"],
+          "pattern": "^evt_[a-z0-9]{6,32}$",
+          "description": "Envelope id of the triggering bus event, null for timer triggers."
+        }
+      }
+    },
+    "DecisionOutcome": {
+      "title": "DecisionOutcome",
+      "description": "issued means commands were sent, answered means a query was answered without commands, skipped means the rule fired but the room was already in the wanted state, rejected means the request could not be carried out, see summary.",
+      "type": "string",
+      "enum": ["issued", "answered", "skipped", "rejected"]
+    },
+    "CommandStatus": {
+      "title": "CommandStatus",
+      "description": "Delivery status of a device command. pending until the matching device.ack arrives.",
+      "type": "string",
+      "enum": ["pending", "applied", "rejected", "timeout"]
+    },
+    "DecisionCommand": {
+      "title": "DecisionCommand",
+      "description": "Reference to one device command of a decision.",
+      "type": "object",
+      "required": ["cmd_id", "type", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "cmd_id": { "$ref": "common.json#/$defs/CmdId", "description": "Command id, matches device.command and device.ack." },
+        "type": { "$ref": "DeviceCommand.json#/$defs/DeviceCommandType", "description": "Command type." },
+        "status": { "$ref": "#/$defs/CommandStatus", "description": "Delivery status." }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "dec_01h9x4k2pq",
+      "ts": "2026-10-13T08:55:02.205Z",
+      "trigger": { "type": "occupancy", "topic": "perception.occupancy", "event_id": "evt_9k2j4h1m0p" },
+      "rule": "occupancy_lights_on",
+      "action": { "type": "lighting.set_zone", "zone": "left", "params": { "brightness": 80, "fade_ms": 400 } },
+      "outcome": "issued",
+      "summary": "Left zone became occupied and ambient light is 140 lux, below the 300 lux target.",
+      "commands": [{ "cmd_id": "c00a41f2e", "type": "set_zone_light", "status": "pending" }],
+      "request_id": null,
+      "reply_text": null
+    },
+    {
+      "id": "dec_01h9x7q8zt",
+      "ts": "2026-10-13T09:14:31.020Z",
+      "trigger": { "type": "voice", "topic": "voice.intent", "event_id": "evt_0b7c2d9e4f" },
+      "rule": "voice_query_temperature",
+      "action": { "type": "answer", "zone": null, "params": {} },
+      "outcome": "answered",
+      "summary": "Answered a temperature question.",
+      "commands": [],
+      "request_id": "req_5t2w9x1c7v",
+      "reply_text": "It is 23.4 degrees in the room."
+    }
+  ]
+}

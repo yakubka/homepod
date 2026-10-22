@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DeviceLink",
+  "description": "State of the serial link to the ESP32 as seen by the bridge. Published on device.status, retained, on every change and every 5 seconds, and returned inside GET /sensors. ok means frames and acks flow, degraded means acks are timing out, down means no frame for 15 seconds, the port is closed or the protocol major differs.",
+  "type": "object",
+  "required": ["device_id", "status", "reason", "fw_version", "protocol_version", "uptime_ms", "last_seen_at", "last_error"],
+  "additionalProperties": false,
+  "properties": {
+    "device_id": {
+      "description": "Device identifier from the last hello, null before the first hello.",
+      "anyOf": [{ "$ref": "common.json#/$defs/DeviceId" }, { "type": "null" }]
+    },
+    "status": { "$ref": "common.json#/$defs/ComponentStatus", "description": "Link status." },
+    "reason": {
+      "description": "Why the link is not ok, null when ok.",
+      "anyOf": [{ "$ref": "#/$defs/LinkReason" }, { "type": "null" }]
+    },
+    "fw_version": {
+      "description": "Firmware version from the last hello, null before the first hello.",
+      "anyOf": [{ "$ref": "common.json#/$defs/SemVer" }, { "type": "null" }]
+    },
+    "protocol_version": {
+      "description": "Protocol version from the last hello, null before the first hello.",
+      "anyOf": [{ "$ref": "common.json#/$defs/SemVer" }, { "type": "null" }]
+    },
+    "uptime_ms": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Device uptime from the latest hello or sensor_report, milliseconds, null before the first frame. A decrease means the device rebooted."
+    },
+    "last_seen_at": {
+      "description": "Receipt time of the last uplink frame on the Pi clock, ISO 8601 UTC, null when none since bridge start.",
+      "anyOf": [{ "$ref": "common.json#/$defs/Timestamp" }, { "type": "null" }]
+    },
+    "last_error": {
+      "description": "Most recent error message from the device, null when none since the last hello.",
+      "anyOf": [{ "$ref": "#/$defs/LinkError" }, { "type": "null" }]
+    }
+  },
+  "$defs": {
+    "LinkReason": {
+      "title": "LinkReason",
+      "description": "no_hello means frames arrive but no hello yet, ack_timeouts means 2 or more consecutive commands timed out, silent means no uplink frame for 15 seconds, port_closed means the serial port is missing or failed, protocol_mismatch means the device protocol major differs from the contract major.",
+      "type": "string",
+      "enum": ["no_hello", "ack_timeouts", "silent", "port_closed", "protocol_mismatch"]
+    },
+    "LinkError": {
+      "title": "LinkError",
+      "description": "Last error frame received from the device.",
+      "type": "object",
+      "required": ["code", "message", "received_at"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "$ref": "DeviceError.json#/$defs/DeviceErrorCode", "description": "Error code from the device." },
+        "message": { "type": "string", "maxLength": 120, "description": "Error message from the device." },
+        "received_at": { "$ref": "common.json#/$defs/Timestamp", "description": "Receipt time on the Pi clock, ISO 8601 UTC." }
+      }
+    }
+  },
+  "examples": [
+    {
+      "device_id": "esp32-a1b2c3",
+      "status": "ok",
+      "reason": null,
+      "fw_version": "0.4.0",
+      "protocol_version": "1.0.0",
+      "uptime_ms": 3605112,
+      "last_seen_at": "2026-10-13T08:55:01.512Z",
+      "last_error": null
+    },
+    {
+      "device_id": "esp32-a1b2c3",
+      "status": "down",
+      "reason": "silent",
+      "fw_version": "0.4.0",
+      "protocol_version": "1.0.0",
+      "uptime_ms": 3700020,
+      "last_seen_at": "2026-10-13T09:01:12.400Z",
+      "last_error": { "code": "sensor_fault", "message": "SHT31 not responding on I2C", "received_at": "2026-10-13T09:00:58.000Z" }
+    }
+  ]
+}

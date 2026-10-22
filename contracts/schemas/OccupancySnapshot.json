@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OccupancySnapshot",
+  "description": "Room occupancy at one instant. Published by vision on perception.occupancy with source vision. The engine serves its fused view on GET /occupancy, which falls back to PIR presence with source presence and null counts when vision is stale. zones holds exactly one entry per zone in canonical order. total is the sum of zone counts, null when any count is null.",
+  "type": "object",
+  "required": ["ts", "total", "occupied", "zones", "source", "confidence", "stale", "frame_id"],
+  "additionalProperties": false,
+  "properties": {
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Capture time of the frame or reading, ISO 8601 UTC." },
+    "total": {
+      "description": "People in the room, integer 0 to 500, null when counts are unknown.",
+      "anyOf": [{ "$ref": "common.json#/$defs/PeopleCount" }, { "type": "null" }]
+    },
+    "occupied": { "type": "boolean", "description": "True when any zone is occupied." },
+    "zones": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "$ref": "ZoneOccupancy.json" },
+      "description": "Per-zone occupancy, one entry per zone, order left, center, right, professor."
+    },
+    "source": { "$ref": "#/$defs/OccupancySource", "description": "Where the estimate comes from." },
+    "confidence": { "$ref": "common.json#/$defs/Confidence", "description": "Overall confidence, 0.0 to 1.0." },
+    "stale": {
+      "type": "boolean",
+      "description": "True when the newest input is older than 5 seconds. Consumers must not switch lights off on stale data."
+    },
+    "frame_id": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Camera frame counter from vision, null when source is presence."
+    }
+  },
+  "$defs": {
+    "OccupancySource": {
+      "title": "OccupancySource",
+      "description": "vision is the camera people counter, presence is the PIR fallback.",
+      "type": "string",
+      "enum": ["vision", "presence"]
+    }
+  },
+  "examples": [
+    {
+      "ts": "2026-10-13T08:55:02.140Z",
+      "total": 4,
+      "occupied": true,
+      "zones": [
+        { "zone": "left", "count": 3, "occupied": true, "confidence": 0.91 },
+        { "zone": "center", "count": 1, "occupied": true, "confidence": 0.87 },
+        { "zone": "right", "count": 0, "occupied": false, "confidence": 0.95 },
+        { "zone": "professor", "count": 0, "occupied": false, "confidence": 0.97 }
+      ],
+      "source": "vision",
+      "confidence": 0.9,
+      "stale": false,
+      "frame_id": 18342
+    }
+  ]
+}

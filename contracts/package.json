@@ -1,0 +1,12 @@
+{
+  "name": "room-contracts-tools",
+  "private": true,
+  "description": "Lint and code generation tools for the room controller interface contract.",
+  "scripts": {
+    "lint": "redocly lint openapi.yaml --config redocly.yaml"
+  },
+  "devDependencies": {
+    "@redocly/cli": "2.65.0",
+    "quicktype": "26.0.0"
+  }
+}

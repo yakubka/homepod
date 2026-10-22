@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HealthStatus",
+  "description": "Liveness and readiness of the Pi services, returned by GET /health. status is the worst status of the critical components api, bus, engine and bridge.",
+  "type": "object",
+  "required": ["status", "ts", "service_version", "contract_version", "uptime_s", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "status": { "$ref": "common.json#/$defs/ComponentStatus", "description": "Overall status." },
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Server time, ISO 8601 UTC. Clients may use it to detect clock skew." },
+    "service_version": { "$ref": "common.json#/$defs/SemVer", "description": "API service version." },
+    "contract_version": { "$ref": "common.json#/$defs/SemVer", "description": "Contract version the API was built against." },
+    "uptime_s": { "type": "integer", "minimum": 0, "description": "Seconds since API start." },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/ComponentHealth" },
+      "description": "One entry per component, at most one per name."
+    }
+  },
+  "$defs": {
+    "HealthComponent": {
+      "title": "HealthComponent",
+      "description": "Component reported in health. esp32 is the microcontroller as seen through the bridge, database is the API store.",
+      "type": "string",
+      "enum": ["api", "bus", "engine", "bridge", "esp32", "vision", "voice", "recorder", "database"]
+    },
+    "ComponentHealth": {
+      "title": "ComponentHealth",
+      "description": "Health of one component.",
+      "type": "object",
+      "required": ["name", "status", "last_seen_at", "detail"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/HealthComponent", "description": "Component." },
+        "status": { "$ref": "common.json#/$defs/ComponentStatus", "description": "Component status." },
+        "last_seen_at": {
+          "description": "Last bus message or heartbeat from the component, ISO 8601 UTC, null when never seen.",
+          "anyOf": [{ "$ref": "common.json#/$defs/Timestamp" }, { "type": "null" }]
+        },
+        "detail": { "type": ["string", "null"], "maxLength": 200, "description": "Short explanation when not ok, otherwise null." }
+      }
+    }
+  },
+  "examples": [
+    {
+      "status": "ok",
+      "ts": "2026-10-13T08:55:05.000Z",
+      "service_version": "0.3.1",
+      "contract_version": "1.0.0",
+      "uptime_s": 86400,
+      "components": [
+        { "name": "api", "status": "ok", "last_seen_at": "2026-10-13T08:55:05.000Z", "detail": null },
+        { "name": "bus", "status": "ok", "last_seen_at": "2026-10-13T08:55:05.000Z", "detail": null },
+        { "name": "engine", "status": "ok", "last_seen_at": "2026-10-13T08:55:04.100Z", "detail": null },
+        { "name": "bridge", "status": "ok", "last_seen_at": "2026-10-13T08:55:04.900Z", "detail": null },
+        { "name": "esp32", "status": "ok", "last_seen_at": "2026-10-13T08:55:03.500Z", "detail": null },
+        { "name": "vision", "status": "degraded", "last_seen_at": "2026-10-13T08:55:04.000Z", "detail": "Running at 0.5 fps, target is 1 fps." },
+        { "name": "voice", "status": "ok", "last_seen_at": "2026-10-13T08:55:02.000Z", "detail": null }
+      ]
+    }
+  ]
+}

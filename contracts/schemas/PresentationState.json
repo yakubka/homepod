@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PresentationState",
+  "description": "Presentation mode. While active the lighting mode is presentation unless a person overrides a zone.",
+  "type": "object",
+  "required": ["active", "started_at", "started_by", "lecture_id"],
+  "additionalProperties": false,
+  "properties": {
+    "active": { "type": "boolean", "description": "True while presentation mode is on." },
+    "started_at": {
+      "description": "Start of the current presentation, ISO 8601 UTC, null when inactive.",
+      "anyOf": [{ "$ref": "common.json#/$defs/Timestamp" }, { "type": "null" }]
+    },
+    "started_by": {
+      "description": "Who started it, null when inactive.",
+      "anyOf": [{ "$ref": "#/$defs/PresentationStarter" }, { "type": "null" }]
+    },
+    "lecture_id": {
+      "description": "Lecture the presentation belongs to, null when none.",
+      "anyOf": [{ "$ref": "common.json#/$defs/LectureId" }, { "type": "null" }]
+    }
+  },
+  "$defs": {
+    "PresentationStarter": {
+      "title": "PresentationStarter",
+      "description": "app is POST /presentation, voice is a start_presentation intent, schedule is a lecture with lighting_mode presentation.",
+      "type": "string",
+      "enum": ["app", "voice", "schedule"]
+    }
+  },
+  "examples": [
+    { "active": true, "started_at": "2026-10-13T09:05:00.000Z", "started_by": "app", "lecture_id": "lec_7f3k2m9q1x" },
+    { "active": false, "started_at": null, "started_by": null, "lecture_id": null }
+  ]
+}
