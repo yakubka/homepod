@@ -1,4 +1,6 @@
 import logging
+import sys
+from pathlib import Path
 
 log = logging.getLogger("detector")
 
@@ -87,3 +89,31 @@ class Detector:
             "count": len(self.found),
             "found": self.found,
         }
+
+
+def make_detector(cfg):
+    """vision.detector: "mobilenet" (default, the Detector above) or "yolox", the AI engineer's YOLOX through
+    AI engineer/vision/team_adapter.py. Same detect() / status() interface; yolox raises on a missing frame or a failed
+    inference, so the occupancy loop reports no camera count instead of 0 people."""
+    kind = cfg.get("vision.detector", "mobilenet")
+    if kind == "mobilenet":
+        return Detector(width=cfg["camera_width"])
+    if kind != "yolox":
+        raise ValueError(f"unknown vision.detector {kind!r}, expected mobilenet or yolox")
+    ai = str(Path(__file__).resolve().parents[2] / "AI engineer")
+    if ai not in sys.path:
+        sys.path.append(ai)
+    from vision.team_adapter import YoloxTeamDetector
+    if SIM:
+        log.warning("replay mode: the team Camera simulates frames, yolox refuses them (no camera count); only real image frames are counted")
+    log.info("yolox detector selected")
+    return YoloxTeamDetector(width=cfg["camera_width"], min_confidence=cfg["occupancy.min_confidence"])
+
+
+def engine_occupancy(cfg, loop):
+    # yolox counts stay on /occupancy but the lighting engine ignores them unless vision.yolox_lighting is true
+    if cfg.get("vision.detector") != "yolox" or cfg.get("vision.yolox_lighting", False):
+        return loop
+    from vision.team_adapter import AdvisoryOccupancy
+    log.warning("yolox counts are advisory, lighting does not use them (vision.yolox_lighting is off)")
+    return AdvisoryOccupancy(loop)

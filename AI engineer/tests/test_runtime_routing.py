@@ -315,7 +315,8 @@ def test_the_runtime_is_the_only_production_consumer_of_the_intent_package_besid
     # Midterm readiness (reviewed addition): the mobile-app contract validates a light request with intents.contracts.validate_command (no router)
     assert importers == {"assistant/runtime.py", "evaluation/week8_intent_eval.py", "evaluation/week8_task1_router_frozen.py", "evaluation/week8_router_history.py",
                          "actions/contracts.py", "actions/simulated_adapter.py", "actions/loop.py", "actions/response_policy.py",
-                         "scripts/week9_simulated_action_demo.py", "assistant/app_interface.py"}
+                         "scripts/week9_simulated_action_demo.py", "assistant/app_interface.py",
+                         "assistant/backend_bridge.py"}   # team backend integration (reviewed addition, 2026-10-22): maps CommandTarget / CommandAction to team intents, no router
 
 
 def test_the_runtime_code_names_no_device_protocol_or_hardware_interface():

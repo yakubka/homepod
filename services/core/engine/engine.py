@@ -144,6 +144,22 @@ def decide(room: RoomState, settings: dict, now: float) -> DecisionResult:
         res.actions.append(want)
         res.decisions.append(Decision(want, True, "", now))
 
+    # an override for a zone no rule proposed for (professor presence unknown, no camera count) still applies
+    proposed = {w.target for w in proposals.values() if w.kind == "zone_light"}
+    for zone, over in sorted(room.overrides.items()):
+        if zone in proposed or now - over.at >= settings["override.ttl"] or room.lights.get(zone) == over.brightness:
+            continue
+        forced = Action(
+            "zone_light",
+            zone,
+            clamp(over.brightness),
+            "manual.override",
+            {"source": over.source, "ttl_left": round(settings["override.ttl"] - (now - over.at))},
+            f"{zone} zone to {clamp(over.brightness)} percent, manual override by {over.source}",
+        )
+        res.actions.append(forced)
+        res.decisions.append(Decision(forced, True, "", now))
+
     from .rules import room_state
 
     res.room = room_state(room, settings)
