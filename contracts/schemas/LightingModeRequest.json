@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LightingModeRequest",
+  "description": "Request body of POST /lighting/mode. manual is not accepted here, it is entered by POST /lighting/zone.",
+  "type": "object",
+  "required": ["mode"],
+  "additionalProperties": false,
+  "properties": {
+    "mode": { "$ref": "#/$defs/SelectableLightingMode", "description": "Mode to switch to." },
+    "fade_ms": { "$ref": "common.json#/$defs/FadeMs", "description": "Fade for every zone, milliseconds 0 to 5000, default 800." }
+  },
+  "$defs": {
+    "SelectableLightingMode": {
+      "title": "SelectableLightingMode",
+      "description": "LightingMode values a client may select directly, every mode except manual.",
+      "type": "string",
+      "enum": ["auto", "lecture", "presentation", "off"]
+    }
+  },
+  "examples": [{ "mode": "lecture" }, { "mode": "off", "fade_ms": 2000 }]
+}

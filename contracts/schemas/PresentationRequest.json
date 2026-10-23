@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PresentationRequest",
+  "description": "Request body of POST /presentation. Idempotent, starting an active presentation or stopping an inactive one returns the current state unchanged.",
+  "type": "object",
+  "required": ["action"],
+  "additionalProperties": false,
+  "properties": {
+    "action": { "$ref": "#/$defs/PresentationAction", "description": "Start or stop." },
+    "lecture_id": {
+      "$ref": "common.json#/$defs/LectureId",
+      "description": "Lecture to attach the presentation to, start only. Defaults to the lecture in progress."
+    }
+  },
+  "$defs": {
+    "PresentationAction": {
+      "title": "PresentationAction",
+      "description": "Presentation request action.",
+      "type": "string",
+      "enum": ["start", "stop"]
+    }
+  },
+  "examples": [{ "action": "start" }, { "action": "stop" }]
+}

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lecture",
+  "description": "A scheduled lecture in the room. Owned and stored by the API. status is derived by the API from the clock and is read-only. ends_at is strictly after starts_at and two lectures that are not cancelled never overlap.",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "course_code",
+    "lecturer",
+    "starts_at",
+    "ends_at",
+    "status",
+    "lighting_mode",
+    "notes",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "common.json#/$defs/LectureId", "description": "Lecture identifier." },
+    "title": { "type": "string", "minLength": 1, "maxLength": 120, "description": "Lecture title, 1 to 120 characters." },
+    "course_code": {
+      "type": ["string", "null"],
+      "maxLength": 20,
+      "description": "Course code such as CS301, null when not set."
+    },
+    "lecturer": { "type": "string", "minLength": 1, "maxLength": 80, "description": "Lecturer display name, 1 to 80 characters." },
+    "starts_at": { "$ref": "common.json#/$defs/Timestamp", "description": "Start, ISO 8601 UTC." },
+    "ends_at": { "$ref": "common.json#/$defs/Timestamp", "description": "End, ISO 8601 UTC, strictly after starts_at." },
+    "status": { "$ref": "#/$defs/LectureStatus", "description": "Lifecycle status, derived by the API." },
+    "lighting_mode": {
+      "$ref": "#/$defs/LectureLightingMode",
+      "description": "Lighting mode the engine applies when the lecture starts."
+    },
+    "notes": { "type": ["string", "null"], "maxLength": 500, "description": "Free text, at most 500 characters, null when empty." },
+    "created_at": { "$ref": "common.json#/$defs/Timestamp", "description": "Creation time, ISO 8601 UTC." },
+    "updated_at": { "$ref": "common.json#/$defs/Timestamp", "description": "Last modification time, ISO 8601 UTC." }
+  },
+  "$defs": {
+    "LectureStatus": {
+      "title": "LectureStatus",
+      "description": "scheduled before starts_at, in_progress between starts_at and ends_at, finished after ends_at, cancelled when cancelled by a person. Finished and cancelled lectures are read-only.",
+      "type": "string",
+      "enum": ["scheduled", "in_progress", "finished", "cancelled"]
+    },
+    "LectureLightingMode": {
+      "title": "LectureLightingMode",
+      "description": "Lighting mode a lecture starts in.",
+      "type": "string",
+      "enum": ["lecture", "presentation"]
+    }
+  },
+  "examples": [
+    {
+      "id": "lec_7f3k2m9q1x",
+      "title": "Distributed Systems, week 7",
+      "course_code": "CS301",
+      "lecturer": "Dr. Karimova",
+      "starts_at": "2026-10-13T09:00:00.000Z",
+      "ends_at": "2026-10-13T10:30:00.000Z",
+      "status": "scheduled",
+      "lighting_mode": "presentation",
+      "notes": "Guest talk in the second half.",
+      "created_at": "2026-10-10T14:02:11.000Z",
+      "updated_at": "2026-10-10T14:02:11.000Z"
+    }
+  ]
+}

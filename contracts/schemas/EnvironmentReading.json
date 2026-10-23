@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EnvironmentReading",
+  "description": "One environment sample from the ESP32, normalised by the bridge from a sensor_report and published on sensor.environment. A value is null when that sensor failed in this cycle.",
+  "type": "object",
+  "required": ["ts", "device_id", "temperature_c", "humidity_pct", "lux"],
+  "additionalProperties": false,
+  "properties": {
+    "ts": { "$ref": "common.json#/$defs/Timestamp", "description": "Sample time, ISO 8601 UTC, as stamped by the Pi on receipt." },
+    "device_id": { "$ref": "common.json#/$defs/DeviceId", "description": "Reporting device." },
+    "temperature_c": {
+      "description": "Air temperature, degrees Celsius, one decimal place, -40.0 to 85.0, null on sensor fault.",
+      "anyOf": [{ "$ref": "common.json#/$defs/TemperatureC" }, { "type": "null" }]
+    },
+    "humidity_pct": {
+      "description": "Relative humidity, percent, integer 0 to 100, null on sensor fault.",
+      "anyOf": [{ "$ref": "common.json#/$defs/HumidityPct" }, { "type": "null" }]
+    },
+    "lux": {
+      "description": "Ambient illuminance at the light sensor, lux, integer 0 to 100000, null on sensor fault.",
+      "anyOf": [{ "$ref": "common.json#/$defs/Lux" }, { "type": "null" }]
+    }
+  },
+  "examples": [
+    {
+      "ts": "2026-10-13T08:55:01.512Z",
+      "device_id": "esp32-a1b2c3",
+      "temperature_c": 23.4,
+      "humidity_pct": 41,
+      "lux": 140
+    }
+  ]
+}

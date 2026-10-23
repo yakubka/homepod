@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VoiceAskRequest",
+  "description": "Request body of POST /voice/ask. Text typed or dictated in the app, handled exactly like a spoken request.",
+  "type": "object",
+  "required": ["text"],
+  "additionalProperties": false,
+  "properties": {
+    "text": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Request text, 1 to 200 characters." },
+    "request_id": {
+      "$ref": "common.json#/$defs/RequestId",
+      "description": "Optional client supplied correlation id. The API generates one when absent."
+    }
+  },
+  "examples": [{ "text": "what is the temperature in here" }]
+}

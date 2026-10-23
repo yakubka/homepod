@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClimateTargetRequest",
+  "description": "Request body of POST /climate/target. Sets the target and switches the climate mode to auto.",
+  "type": "object",
+  "required": ["target_c"],
+  "additionalProperties": false,
+  "properties": {
+    "target_c": { "$ref": "common.json#/$defs/TargetTemperatureC", "description": "Target temperature, degrees Celsius, one decimal place, 16.0 to 30.0." }
+  },
+  "examples": [{ "target_c": 22.5 }]
+}
